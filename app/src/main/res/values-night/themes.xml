@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark parent + dark window background = no white flash during nav
+         transitions or cold start in dark mode. -->
+    <style name="Theme.JourneyRecorder" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Journey Recorder</string>
+    <string name="a11y_service_label">Journey Recorder</string>
+    <string name="a11y_service_description">Records taps, screen changes and text input in the app you choose, so SQA can export the flow as a markdown step list. Nothing is captured unless you explicitly start a recording, and all data stays on this device until you export it.</string>
 </resources>

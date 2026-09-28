@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.JourneyRecorder" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Window background must match the Compose light scheme background:
+         nav transitions alpha-blend both screens, so any mismatch bleeds
+         through as a flash. -->
+    <style name="Theme.JourneyRecorder" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>
