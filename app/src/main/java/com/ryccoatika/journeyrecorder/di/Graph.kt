@@ -2,6 +2,7 @@ package com.ryccoatika.journeyrecorder.di
 
 import android.content.Context
 import androidx.room.Room
+import com.ryccoatika.journeyrecorder.data.AppPrefs
 import com.ryccoatika.journeyrecorder.data.JourneyRepository
 import com.ryccoatika.journeyrecorder.data.db.AppDatabase
 import com.ryccoatika.journeyrecorder.data.db.JourneyDao
@@ -22,7 +23,12 @@ object Graph {
         JourneyRepository(journeyDao, recorderState, stepPipeline)
     }
 
+    lateinit var appPrefs: AppPrefs
+        private set
+
     fun init(context: Context) {
-        db = Room.databaseBuilder(context, AppDatabase::class.java, "journeys.db").build()
+        val appContext = context.applicationContext
+        db = Room.databaseBuilder(appContext, AppDatabase::class.java, "journeys.db").build()
+        appPrefs = AppPrefs(appContext)
     }
 }

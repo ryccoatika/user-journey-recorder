@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.ryccoatika.journeyrecorder.ui.detail.DetailScreen
 import com.ryccoatika.journeyrecorder.ui.guide.GuideScreen
 import com.ryccoatika.journeyrecorder.ui.home.HomeScreen
+import com.ryccoatika.journeyrecorder.ui.settings.ContactDeveloperScreen
 import com.ryccoatika.journeyrecorder.ui.settings.SettingsScreen
 import com.ryccoatika.journeyrecorder.ui.setup.SetupScreen
 import kotlinx.serialization.Serializable
@@ -31,6 +32,9 @@ object SettingsRoute
 
 @Serializable
 object GuideRoute
+
+@Serializable
+object ContactDeveloperRoute
 
 // Material 3 emphasized easing pair — natural settle on enter, quick launch on exit.
 private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
@@ -96,10 +100,14 @@ fun AppNav() {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onOpenGuide = { navController.navigate(GuideRoute) },
+                onOpenContactDeveloper = { navController.navigate(ContactDeveloperRoute) },
             )
         }
         composable<GuideRoute> {
             GuideScreen(onBack = { navController.popBackStack() })
+        }
+        composable<ContactDeveloperRoute> {
+            ContactDeveloperScreen(onBack = { navController.popBackStack() })
         }
     }
 }
