@@ -1,5 +1,8 @@
 package com.ryccoatika.journeyrecorder.ui.home
 
+import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -57,12 +60,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
+import com.ryccoatika.journeyrecorder.util.PermissionChecks
 import com.ryccoatika.journeyrecorder.ui.common.InfoChip
 import com.ryccoatika.journeyrecorder.ui.common.PulsingRecordDot
 import com.ryccoatika.journeyrecorder.ui.common.TargetAppIcon
@@ -80,6 +85,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
     val items by viewModel.items.collectAsState()
     val banner by viewModel.banner.collectAsState()
     val bubbleEnabled by viewModel.bubbleEnabled.collectAsState()
@@ -95,7 +101,27 @@ fun HomeScreen(
                     Text("Journey Recorder", fontWeight = FontWeight.SemiBold)
                 },
                 actions = {
-                    IconButton(onClick = viewModel::toggleBubble) {
+                    IconButton(
+                        onClick = {
+                            val turningOn = !bubbleEnabled
+                            viewModel.toggleBubble()
+                            // The bubble lives in the accessibility service — if it
+                            // isn't enabled, sending the user to enable it is what
+                            // makes the bubble actually appear.
+                            if (turningOn &&
+                                !PermissionChecks.isAccessibilityServiceEnabled(context)
+                            ) {
+                                Toast.makeText(
+                                    context,
+                                    "Enable Journey Recorder to show the floating button",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                                context.startActivity(
+                                    Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+                                )
+                            }
+                        },
+                    ) {
                         Icon(
                             if (bubbleEnabled) {
                                 Icons.Filled.BubbleChart
