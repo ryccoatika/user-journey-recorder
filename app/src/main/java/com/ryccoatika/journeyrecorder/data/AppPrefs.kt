@@ -1,6 +1,7 @@
 package com.ryccoatika.journeyrecorder.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -34,7 +35,21 @@ class AppPrefs(private val context: Context) {
         }
     }
 
+    /** Whether the always-on floating launcher bubble is enabled. Default on. */
+    fun observeBubbleEnabled(): Flow<Boolean> =
+        context.appPrefsDataStore.data
+            .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+            .map { it[BUBBLE_ENABLED] ?: true }
+
+    suspend fun setBubbleEnabled(enabled: Boolean) {
+        try {
+            context.appPrefsDataStore.edit { prefs -> prefs[BUBBLE_ENABLED] = enabled }
+        } catch (_: IOException) {
+        }
+    }
+
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val BUBBLE_ENABLED = booleanPreferencesKey("bubble_enabled")
     }
 }

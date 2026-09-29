@@ -64,6 +64,18 @@ class JourneyRepository(
         stateHolder.setIdle()
     }
 
+    /**
+     * Abort the active recording and delete everything captured so far.
+     * The pipeline is drained first so no late coalesced insert can recreate
+     * rows against the deleted journey.
+     */
+    suspend fun discardRecording() {
+        val state = stateHolder.current as? RecorderStateHolder.RecorderState.Recording ?: return
+        pipeline.flushAndEnd()
+        dao.deleteJourney(state.journeyId)
+        stateHolder.setIdle()
+    }
+
     /** Close journeys left open by a process/service death. Recorded steps stay intact. */
     suspend fun recoverOrphans() {
         val recordingId =

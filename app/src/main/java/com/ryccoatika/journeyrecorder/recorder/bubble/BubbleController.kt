@@ -1,9 +1,11 @@
 package com.ryccoatika.journeyrecorder.recorder.bubble
 
 import android.accessibilityservice.AccessibilityService
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.Gravity
@@ -12,8 +14,9 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.graphics.drawable.toBitmap
+import android.widget.ImageView
 import com.ryccoatika.journeyrecorder.data.db.JourneyDao
 import com.ryccoatika.journeyrecorder.recorder.RecorderStateHolder
 import kotlinx.coroutines.CoroutineScope
@@ -27,89 +30,63 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * Floating recording bubble hosted inside the accessibility service. Plain
- * Views only — no Compose. Primary window type TYPE_ACCESSIBILITY_OVERLAY
- * (no permission, trusted touch); falls back to TYPE_APPLICATION_OVERLAY /
- * TYPE_PHONE with 0.8 alpha when the primary add fails.
+ * XRecorder-style always-on floating launcher. Plain Views only.
+ *
+ * Collapsed: a circular orb — app icon when idle, pulsing red + elapsed timer
+ * while recording. Tap fans out a radial menu of circular action buttons:
+ *  - idle:      Record · Home · Settings · Close
+ *  - recording: Stop · Discard · Settings · Close
+ *
+ * One overlay window; it grows to hold the fan when expanded and the main orb
+ * is kept pinned to its collapsed screen position.
  */
 class BubbleController(
     private val service: AccessibilityService,
     private val stateHolder: RecorderStateHolder,
     private val dao: JourneyDao,
-    private val onStopRequested: () -> Unit,
+    private val onRecord: () -> Unit,
+    private val onStop: () -> Unit,
+    private val onDiscard: () -> Unit,
+    private val onHome: () -> Unit,
+    private val onSettings: () -> Unit,
+    private val onExit: () -> Unit,
 ) {
     private val windowManager =
         service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
     private var root: FrameLayout? = null
     private var params: WindowManager.LayoutParams? = null
-    private var dot: FrameLayout? = null
-    private var pulseAnimator: android.animation.ValueAnimator? = null
-    private var pill: LinearLayout? = null
-    private var countText: TextView? = null
+    private var pulseAnimator: ValueAnimator? = null
     private var uiScope: CoroutineScope? = null
-    private var revertJob: Job? = null
-    private var disposed = false
+    private var collapseJob: Job? = null
+    private var timerJob: Job? = null
+    private var countJob: Job? = null
+    private var enabled = false
+    private var expanded = false
+
+    // Drag-to-close trash target (a separate, non-touchable window).
+    private var trashRoot: FrameLayout? = null
+    private var trashIcon: TextView? = null
+    private var overTrash = false
+
+    // Collapsed orb position, kept stable across expand/collapse.
+    private var orbX = 0
+    private var orbY = 0
 
     private val density: Float get() = service.resources.displayMetrics.density
     private fun dp(value: Int): Int = (value * density).roundToInt()
     private val screenWidth: Int get() = service.resources.displayMetrics.widthPixels
     private val screenHeight: Int get() = service.resources.displayMetrics.heightPixels
 
-    /** Show the bubble for the currently recording journey. Safe to call twice. */
-    fun show() {
-        if (disposed) return
-        val recording = stateHolder.current
-            as? RecorderStateHolder.RecorderState.Recording ?: return
-        hide()
+    private val recording: RecorderStateHolder.RecorderState.Recording?
+        get() = stateHolder.current as? RecorderStateHolder.RecorderState.Recording
 
-        val count = TextView(service).apply {
-            setTextColor(Color.WHITE)
-            textSize = 12f
-            gravity = Gravity.CENTER
-            text = "0"
+    /** Show the bubble (idempotent). Renders the mode for the current state. */
+    fun enable() {
+        if (enabled) {
+            renderCollapsed()
+            return
         }
-        countText = count
-
-        val dotView = FrameLayout(service).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(RED)
-            }
-            addView(
-                count,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                ),
-            )
-        }
-        dot = dotView
-
-        // Soft alpha pulse — unmistakable "recording" signal even at a glance.
-        pulseAnimator = android.animation.ValueAnimator.ofFloat(1f, 0.55f).apply {
-            duration = 700
-            repeatMode = android.animation.ValueAnimator.REVERSE
-            repeatCount = android.animation.ValueAnimator.INFINITE
-            addUpdateListener { dotView.alpha = it.animatedValue as Float }
-            start()
-        }
-
-        val pillView = buildPill()
-        pill = pillView
-
-        val container = FrameLayout(service).apply {
-            addView(dotView, FrameLayout.LayoutParams(dp(DOT_DP), dp(DOT_DP)))
-            addView(
-                pillView,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-        }
-        pillView.visibility = View.GONE
-
         val layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -119,10 +96,13 @@ class BubbleController(
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = screenWidth - dp(DOT_DP + 8)
-            y = dp(96)
+            x = screenWidth - dp(ORB_DP + 8)
+            y = dp(120)
         }
+        orbX = layoutParams.x
+        orbY = layoutParams.y
 
+        val container = FrameLayout(service)
         val added = try {
             windowManager.addView(container, layoutParams)
             true
@@ -133,7 +113,7 @@ class BubbleController(
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
             }
-            layoutParams.alpha = 0.8f
+            layoutParams.alpha = 0.9f
             try {
                 windowManager.addView(container, layoutParams)
                 true
@@ -145,120 +125,377 @@ class BubbleController(
 
         root = container
         params = layoutParams
-        dotView.setOnTouchListener(DragListener())
-
-        uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).also { scope ->
-            scope.launch {
-                dao.observeEventCount(recording.journeyId).collect { total ->
-                    count.text = total.toString()
-                }
-            }
-        }
+        enabled = true
+        uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        renderCollapsed()
     }
 
-    fun hide() {
-        pulseAnimator?.cancel()
-        pulseAnimator = null
-        revertJob?.cancel()
-        revertJob = null
+    fun disable() {
+        cancelJobs()
+        hideTrashTarget()
         uiScope?.cancel()
         uiScope = null
         root?.let { view ->
             try {
                 windowManager.removeView(view)
             } catch (_: Throwable) {
-                // window already gone
             }
         }
         root = null
         params = null
-        dot = null
-        pill = null
-        countText = null
+        enabled = false
+        expanded = false
     }
 
-    fun dispose() {
-        hide()
-        disposed = true
+    /** Called when the recorder state flips between idle and recording. */
+    fun onStateChanged() {
+        if (!enabled) return
+        if (expanded) collapse() else renderCollapsed()
     }
 
-    // ------------------------------------------------------------------ private
+    fun dispose() = disable()
 
-    private fun buildPill(): LinearLayout {
-        fun label(text: String, bold: Boolean = false): TextView = TextView(service).apply {
-            this.text = text
-            setTextColor(Color.WHITE)
-            textSize = 14f
-            gravity = Gravity.CENTER
-            if (bold) paint.isFakeBoldText = true
-            setPadding(dp(8), dp(4), dp(8), dp(4))
+    private fun cancelJobs() {
+        pulseAnimator?.cancel(); pulseAnimator = null
+        collapseJob?.cancel(); collapseJob = null
+        timerJob?.cancel(); timerJob = null
+        countJob?.cancel(); countJob = null
+    }
+
+    // ------------------------------------------------------------- collapsed orb
+
+    private fun renderCollapsed() {
+        val container = root ?: return
+        cancelJobs()
+        expanded = false
+        container.removeAllViews()
+
+        // Restore collapsed window size/position.
+        params?.let { p ->
+            p.width = WindowManager.LayoutParams.WRAP_CONTENT
+            p.height = WindowManager.LayoutParams.WRAP_CONTENT
+            p.x = orbX
+            p.y = orbY
+            safeUpdate(container, p)
         }
 
-        val confirm = label("✓", bold = true).apply {
-            isClickable = true
-            setOnClickListener {
-                revertPill()
-                onStopRequested()
-            }
-        }
-        val cancel = label("✕", bold = true).apply {
-            isClickable = true
-            setOnClickListener { revertPill() }
-        }
+        val orb = buildOrb()
+        container.addView(orb, FrameLayout.LayoutParams(dp(ORB_DP), dp(ORB_DP)))
+        orb.setOnTouchListener(DragListener())
+    }
 
-        return LinearLayout(service).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+    private fun buildOrb(): View {
+        val rec = recording
+        val ring = FrameLayout(service).apply {
             background = GradientDrawable().apply {
-                cornerRadius = dp(24).toFloat()
-                setColor(RED)
+                shape = GradientDrawable.OVAL
+                setColor(SURFACE)
+                setStroke(dp(2), Color.argb(70, 255, 255, 255))
             }
-            setPadding(dp(10), dp(4), dp(10), dp(4))
-            addView(label("Stop?"))
-            addView(confirm)
-            addView(cancel)
+            elevation = dp(6).toFloat()
+        }
+        if (rec == null) {
+            // Idle: app icon.
+            val icon = ImageView(service).apply {
+                runCatching {
+                    setImageBitmap(
+                        service.packageManager
+                            .getApplicationIcon(service.packageName)
+                            .toBitmap(dp(28), dp(28)),
+                    )
+                }
+            }
+            ring.addView(
+                icon,
+                FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER),
+            )
+        } else {
+            // Recording: pulsing red core with the live elapsed timer.
+            val timer = TextView(service).apply {
+                setTextColor(Color.WHITE)
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                text = "0:00"
+            }
+            val core = FrameLayout(service).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(RED)
+                }
+                addView(timer, FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                ))
+            }
+            val inset = dp(5)
+            ring.addView(
+                core,
+                FrameLayout.LayoutParams(dp(ORB_DP) - inset * 2, dp(ORB_DP) - inset * 2, Gravity.CENTER),
+            )
+            pulseAnimator = ValueAnimator.ofFloat(1f, 0.55f).apply {
+                duration = 700
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                addUpdateListener { core.alpha = it.animatedValue as Float }
+                start()
+            }
+            startTimer(timer, rec.journeyId)
+        }
+        return ring
+    }
+
+    private fun startTimer(timer: TextView, journeyId: Long) {
+        timerJob?.cancel()
+        timerJob = uiScope?.launch {
+            val startedAt = dao.getJourney(journeyId)?.startedAt ?: System.currentTimeMillis()
+            while (true) {
+                val elapsed = ((System.currentTimeMillis() - startedAt) / 1000).coerceAtLeast(0)
+                timer.text = "%d:%02d".format(elapsed / 60, elapsed % 60)
+                delay(1000)
+            }
         }
     }
 
-    /** Tap on the dot: morph into the stop-confirm pill, auto-revert in 3 s. */
-    private fun showPill() {
-        dot?.visibility = View.GONE
-        pill?.visibility = View.VISIBLE
-        revertJob?.cancel()
-        revertJob = uiScope?.launch {
-            delay(PILL_REVERT_MS)
-            revertPill()
+    // -------------------------------------------------------------- expanded fan
+
+    private fun expand() {
+        val container = root ?: return
+        val p = params ?: return
+        cancelJobs()
+        expanded = true
+        container.removeAllViews()
+
+        val fanDown = orbY < screenHeight / 2
+        val fanLeft = orbX + dp(ORB_DP) / 2 > screenWidth / 2
+
+        val exp = dp(EXP_DP)
+        val orbSize = dp(ORB_DP)
+        // Pin the orb to its collapsed screen position; grow the window toward
+        // the fan direction.
+        val orbLeft = if (fanLeft) exp - orbSize else 0
+        val orbTop = if (fanDown) 0 else exp - orbSize
+        p.width = exp
+        p.height = exp
+        p.x = orbX - orbLeft
+        p.y = orbY - orbTop
+        safeUpdate(container, p)
+
+        val orbCx = orbLeft + orbSize / 2
+        val orbCy = orbTop + orbSize / 2
+
+        // Main button (tap to collapse) sits where the orb was.
+        val main = circleButton(if (recording != null) "‖" else "✕", SURFACE) { collapse() }
+        addAt(container, main, orbCx, orbCy, orbSize)
+
+        val actions = if (recording != null) {
+            listOf(
+                Action("■", RED) { collapse(); onStop() },
+                Action("🗑", SURFACE) { collapse(); onDiscard() },
+                Action("⚙", SURFACE) { collapse(); onSettings() },
+            )
+        } else {
+            // Close/stop the idle bubble by dragging it to the trash target,
+            // not from the fan.
+            listOf(
+                Action("●", RED, dot = true) { collapse(); onRecord() },
+                Action("⌂", SURFACE) { collapse(); onHome() },
+                Action("⚙", SURFACE) { collapse(); onSettings() },
+            )
+        }
+
+        val radius = dp(RADIUS_DP)
+        val n = actions.size
+        actions.forEachIndexed { i, action ->
+            // Fan across a quarter arc from horizontal to vertical, into the
+            // grow direction.
+            val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
+            val angle = Math.toRadians(90.0 * t) // 0 = horizontal, 90 = vertical
+            val dx = (radius * Math.cos(angle)).roundToInt() * if (fanLeft) -1 else 1
+            val dy = (radius * Math.sin(angle)).roundToInt() * if (fanDown) 1 else -1
+            val btn = if (action.dot) {
+                recordDotButton(action.onClick)
+            } else {
+                circleButton(action.glyph, action.bg, action.onClick)
+            }
+            addAt(container, btn, orbCx + dx, orbCy + dy, dp(BTN_DP))
+        }
+
+        armAutoCollapse()
+    }
+
+    private fun collapse() {
+        renderCollapsed()
+    }
+
+    private fun armAutoCollapse() {
+        collapseJob?.cancel()
+        collapseJob = uiScope?.launch {
+            delay(AUTO_COLLAPSE_MS)
+            collapse()
         }
     }
 
-    private fun revertPill() {
-        revertJob?.cancel()
-        revertJob = null
-        pill?.visibility = View.GONE
-        dot?.visibility = View.VISIBLE
+    private data class Action(
+        val glyph: String,
+        val bg: Int,
+        val dot: Boolean = false,
+        val onClick: () -> Unit,
+    )
+
+    private fun addAt(container: FrameLayout, view: View, cx: Int, cy: Int, size: Int) {
+        container.addView(
+            view,
+            FrameLayout.LayoutParams(size, size).apply {
+                leftMargin = cx - size / 2
+                topMargin = cy - size / 2
+            },
+        )
     }
+
+    private fun circleButton(glyph: String, bg: Int, onClick: () -> Unit): View =
+        TextView(service).apply {
+            text = glyph
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(bg)
+                setStroke(dp(1), Color.argb(40, 255, 255, 255))
+            }
+            elevation = dp(6).toFloat()
+            isClickable = true
+            setOnClickListener { onClick() }
+        }
+
+    /** White circle with a red dot — the Record affordance. */
+    private fun recordDotButton(onClick: () -> Unit): View =
+        FrameLayout(service).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.WHITE)
+            }
+            elevation = dp(6).toFloat()
+            val dot = View(service).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(RED)
+                }
+            }
+            addView(dot, FrameLayout.LayoutParams(dp(18), dp(18), Gravity.CENTER))
+            isClickable = true
+            setOnClickListener { onClick() }
+        }
+
+    // -------------------------------------------------------------- drag-to-trash
+
+    /** Trash catch target that slides up from the bottom while dragging. */
+    private fun showTrashTarget() {
+        if (trashRoot != null) return
+        overTrash = false
+        val icon = TextView(service).apply {
+            text = "🗑"
+            textSize = 26f
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(TRASH_BG)
+                setStroke(dp(2), Color.argb(60, 255, 255, 255))
+            }
+            elevation = dp(8).toFloat()
+        }
+        trashIcon = icon
+        val container = FrameLayout(service).apply {
+            addView(icon, FrameLayout.LayoutParams(dp(TRASH_DP), dp(TRASH_DP), Gravity.CENTER))
+        }
+        val lp = WindowManager.LayoutParams(
+            dp(TRASH_DP + 24),
+            dp(TRASH_DP + 24),
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            y = dp(72)
+        }
+        try {
+            windowManager.addView(container, lp)
+            trashRoot = container
+            container.alpha = 0f
+            container.translationY = dp(40).toFloat()
+            container.animate().alpha(1f).translationY(0f).setDuration(180).start()
+        } catch (_: Throwable) {
+            trashRoot = null
+            trashIcon = null
+        }
+    }
+
+    private fun hideTrashTarget() {
+        overTrash = false
+        trashRoot?.let { view ->
+            try {
+                windowManager.removeView(view)
+            } catch (_: Throwable) {
+            }
+        }
+        trashRoot = null
+        trashIcon = null
+    }
+
+    /** Highlight the target when the dragged orb is within catch range. */
+    private fun updateTrashHighlight() {
+        val target = trashRoot ?: return
+        val p = params ?: return
+        val orbCx = p.x + dp(ORB_DP) / 2
+        val orbCy = p.y + dp(ORB_DP) / 2
+        val loc = IntArray(2)
+        target.getLocationOnScreen(loc)
+        val targetCx = loc[0] + target.width / 2
+        val targetCy = loc[1] + target.height / 2
+        val dist = kotlin.math.hypot(
+            (orbCx - targetCx).toDouble(),
+            (orbCy - targetCy).toDouble(),
+        )
+        val nowOver = dist < dp(TRASH_CATCH_DP)
+        if (nowOver != overTrash) {
+            overTrash = nowOver
+            trashIcon?.apply {
+                (background as? GradientDrawable)?.setColor(if (nowOver) RED else TRASH_BG)
+                animate().scaleX(if (nowOver) 1.25f else 1f)
+                    .scaleY(if (nowOver) 1.25f else 1f).setDuration(120).start()
+            }
+        }
+    }
+
+    private fun overlayType(): Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+    } else {
+        @Suppress("DEPRECATION")
+        WindowManager.LayoutParams.TYPE_PHONE
+    }
+
+    // ------------------------------------------------------------------- helpers
 
     private fun snapToEdge() {
-        val layoutParams = params ?: return
+        val p = params ?: return
         val view = root ?: return
-        val width = if (view.width > 0) view.width else dp(DOT_DP)
-        val height = if (view.height > 0) view.height else dp(DOT_DP)
-        layoutParams.x = if (layoutParams.x + width / 2 < screenWidth / 2) {
-            0
-        } else {
-            (screenWidth - width).coerceAtLeast(0)
-        }
-        // Rest Y clamped to the top 40% of the screen.
-        val maxY = (screenHeight * 2 / 5 - height).coerceAtLeast(0)
-        layoutParams.y = layoutParams.y.coerceIn(0, maxY)
-        safeUpdate(view, layoutParams)
+        val size = dp(ORB_DP)
+        p.x = if (p.x + size / 2 < screenWidth / 2) 0 else (screenWidth - size).coerceAtLeast(0)
+        val maxY = (screenHeight - size - dp(80)).coerceAtLeast(0)
+        p.y = p.y.coerceIn(dp(24), maxY)
+        orbX = p.x
+        orbY = p.y
+        safeUpdate(view, p)
     }
 
     private fun safeUpdate(view: View, layoutParams: WindowManager.LayoutParams) {
         try {
             windowManager.updateViewLayout(view, layoutParams)
         } catch (_: Throwable) {
-            // window went away mid-drag
         }
     }
 
@@ -271,14 +508,14 @@ class BubbleController(
         private var dragging = false
 
         override fun onTouch(v: View, event: MotionEvent): Boolean {
-            val layoutParams = params ?: return false
+            val p = params ?: return false
             val view = root ?: return false
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downRawX = event.rawX
                     downRawY = event.rawY
-                    startX = layoutParams.x
-                    startY = layoutParams.y
+                    startX = p.x
+                    startY = p.y
                     dragging = false
                     return true
                 }
@@ -288,22 +525,39 @@ class BubbleController(
                     val dy = event.rawY - downRawY
                     if (!dragging && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                         dragging = true
+                        showTrashTarget()
                     }
                     if (dragging) {
-                        layoutParams.x = (startX + dx).roundToInt()
-                        layoutParams.y = (startY + dy).roundToInt()
-                        safeUpdate(view, layoutParams)
+                        p.x = (startX + dx).roundToInt()
+                        p.y = (startY + dy).roundToInt()
+                        orbX = p.x
+                        orbY = p.y
+                        safeUpdate(view, p)
+                        updateTrashHighlight()
                     }
                     return true
                 }
 
                 MotionEvent.ACTION_UP -> {
-                    if (dragging) snapToEdge() else showPill()
+                    when {
+                        dragging && overTrash -> {
+                            hideTrashTarget()
+                            onExit()
+                        }
+                        dragging -> {
+                            hideTrashTarget()
+                            snapToEdge()
+                        }
+                        else -> expand()
+                    }
                     return true
                 }
 
                 MotionEvent.ACTION_CANCEL -> {
-                    if (dragging) snapToEdge()
+                    if (dragging) {
+                        hideTrashTarget()
+                        snapToEdge()
+                    }
                     return true
                 }
             }
@@ -312,8 +566,15 @@ class BubbleController(
     }
 
     private companion object {
-        const val DOT_DP = 48
-        const val PILL_REVERT_MS = 3000L
+        const val ORB_DP = 52
+        const val BTN_DP = 48
+        const val RADIUS_DP = 78
+        const val EXP_DP = 200
+        const val AUTO_COLLAPSE_MS = 8000L
+        const val TRASH_DP = 60
+        const val TRASH_CATCH_DP = 80
         val RED = 0xFFD32F2F.toInt()
+        val SURFACE = 0xFF2A2B31.toInt()
+        val TRASH_BG = 0xFF3A3B41.toInt()
     }
 }

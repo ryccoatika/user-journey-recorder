@@ -44,8 +44,22 @@ private const val ENTER_MS = 350
 private const val EXIT_MS = 250
 
 @Composable
-fun AppNav() {
+fun AppNav(
+    deepLink: DeepLink = DeepLink(),
+    onDeepLinkHandled: () -> Unit = {},
+) {
     val navController = rememberNavController()
+
+    // Deep links from the bubble / notification.
+    androidx.compose.runtime.LaunchedEffect(deepLink) {
+        when {
+            deepLink.journeyId != null -> navController.navigate(DetailRoute(deepLink.journeyId))
+            deepLink.openSetup -> navController.navigate(SetupRoute)
+            deepLink.openSettings -> navController.navigate(SettingsRoute)
+            else -> return@LaunchedEffect
+        }
+        onDeepLinkHandled()
+    }
     // Shared-axis X: forward pushes in from the right while the old screen
     // parallax-slides left; back reverses the motion. Fades keep the overlap
     // from ever looking like a hard cut.

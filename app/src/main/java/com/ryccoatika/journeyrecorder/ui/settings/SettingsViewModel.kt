@@ -18,7 +18,15 @@ class SettingsViewModel(
         .observeThemeMode()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)
 
+    val bubbleEnabled: StateFlow<Boolean> = appPrefs
+        .observeBubbleEnabled()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { appPrefs.setThemeMode(mode) }
+    }
+
+    fun setBubbleEnabled(enabled: Boolean) {
+        viewModelScope.launch { appPrefs.setBubbleEnabled(enabled) }
     }
 }

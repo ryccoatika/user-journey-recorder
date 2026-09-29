@@ -8,27 +8,41 @@ import android.widget.Toast
 import com.ryccoatika.journeyrecorder.data.db.Confidence
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
 import com.ryccoatika.journeyrecorder.di.Graph
+import com.ryccoatika.journeyrecorder.export.ExportManager
+import com.ryccoatika.journeyrecorder.export.ExportResult
+import com.ryccoatika.journeyrecorder.export.JourneyNotifier
 import com.ryccoatika.journeyrecorder.recorder.bubble.BubbleController
+import com.ryccoatika.journeyrecorder.recorder.bubble.ResultCardController
+import com.ryccoatika.journeyrecorder.ui.MainActivity
+import com.ryccoatika.journeyrecorder.util.DeviceInfoProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * Thin entry point: gate events, hand them to [EventInterpreter], ship the
- * resulting [RawCapture] to [StepPipeline]. Owns the [BubbleController] and a
- * Main.immediate scope (WindowManager calls must stay on the main thread).
+ * Capture engine + XRecorder-style always-on launcher host. Gates events into
+ * the [StepPipeline], and owns the [BubbleController], the result card, and the
+ * persistent controls notification. WindowManager work stays on a
+ * Main.immediate scope.
  */
 class JourneyAccessibilityService : AccessibilityService() {
 
     private var scope: CoroutineScope? = null
     private var bubble: BubbleController? = null
+    private var resultCard: ResultCardController? = null
     private lateinit var screenTracker: ScreenTracker
     private lateinit var interpreter: EventInterpreter
     private var leftTargetApp = false
     private var tornDown = false
+
+    /** App on screen right now — used by "record the current app". */
+    private var lastForegroundPackage: String? = null
+    private var launcherPackages: Set<String> = emptySet()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -40,36 +54,64 @@ class JourneyAccessibilityService : AccessibilityService() {
         )
         screenTracker.onZeroElementIds = { onZeroElementIds() }
         interpreter = EventInterpreter(screenTracker)
+        launcherPackages = resolveLauncherPackages()
 
         Graph.recorderState.setServiceConnected(true)
 
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         this.scope = scope
 
+        resultCard = ResultCardController(this)
         bubble = BubbleController(
             service = this,
             stateHolder = Graph.recorderState,
             dao = Graph.journeyDao,
-            onStopRequested = { scope.launch { Graph.repository.finishRecording() } },
+            onRecord = { startRecordingForeground() },
+            onStop = { scope.launch { finishAndPresentResult() } },
+            onDiscard = { discardCurrent() },
+            onHome = { goHome() },
+            onSettings = { openInApp(EXTRA_OPEN_SETTINGS) },
+            onExit = { scope.launch { Graph.appPrefs.setBubbleEnabled(false) } },
         )
 
         scope.launch { Graph.repository.recoverOrphans() }
 
+        // Recording lifecycle: arm the screen tracker when a recording starts.
         scope.launch {
             Graph.recorderState.state.collect { state ->
-                when (state) {
-                    is RecorderStateHolder.RecorderState.Recording -> onRecordingStarted(state)
-                    RecorderStateHolder.RecorderState.Idle -> onRecordingStopped()
+                if (state is RecorderStateHolder.RecorderState.Recording) {
+                    leftTargetApp = false
+                    screenTracker.startRecording()
                 }
             }
+        }
+
+        // Bubble visibility follows the enabled pref and re-renders on state change.
+        scope.launch {
+            combine(
+                Graph.appPrefs.observeBubbleEnabled(),
+                Graph.recorderState.state,
+            ) { enabled, _ -> enabled }
+                .collect { enabled -> if (enabled) bubble?.enable() else bubble?.disable() }
         }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
+        val pkg = event.packageName?.toString() ?: return
+
+        // Track the foreground app at all times (even when idle) so the launcher
+        // can record "the current app". Ignore our own overlay and transient
+        // system windows.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            pkg != OWN_PACKAGE && pkg != packageName &&
+            !isTransientSystemPackage(pkg) && pkg !in SYSTEM_ALLOWLIST
+        ) {
+            lastForegroundPackage = pkg
+        }
+
         val state = Graph.recorderState.current
             as? RecorderStateHolder.RecorderState.Recording ?: return
-        val pkg = event.packageName?.toString() ?: return
         // Own package is ALWAYS excluded — bubble taps are never recorded.
         if (pkg == OWN_PACKAGE || pkg == packageName) return
 
@@ -95,7 +137,6 @@ class JourneyAccessibilityService : AccessibilityService() {
                 interpreter.extractSystemDialog(event)?.let(pipeline::submit)
 
             else -> {
-                // Keyboard / status bar windows are not "leaving the app".
                 if (!leftTargetApp &&
                     event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
                     !isTransientSystemPackage(pkg)
@@ -119,21 +160,136 @@ class JourneyAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    // ------------------------------------------------------------------ private
+    // --------------------------------------------------------------- launcher ops
 
-    private fun onRecordingStarted(state: RecorderStateHolder.RecorderState.Recording) {
-        leftTargetApp = false
-        screenTracker.startRecording()
-        // NOTE: serviceInfo.packageNames narrowing is deliberately NOT applied:
-        // it would stop the framework from ever delivering foreign-package
-        // WINDOW_STATE_CHANGED events, making the "Left/Returned to target app"
-        // markers unreachable. The in-code gate above is the filter.
-        bubble?.show()
+    private fun startRecordingForeground() {
+        if (Graph.recorderState.current is RecorderStateHolder.RecorderState.Recording) return
+        // Live probe first (most reliable), then the tracked value.
+        val probed = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+            ?.takeIf { it != packageName && it != OWN_PACKAGE && !isTransientSystemPackage(it) }
+        val pkg = probed ?: lastForegroundPackage
+        if (pkg == null || pkg in launcherPackages || pkg == packageName) {
+            // No recordable app on screen — send the user to the picker.
+            openInApp(EXTRA_OPEN_SETUP)
+            return
+        }
+        scope?.launch {
+            val pm = packageManager
+            val label = runCatching {
+                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+            }.getOrNull()
+            val version = runCatching {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(pkg, 0).versionName
+            }.getOrNull()
+            runCatching {
+                Graph.repository.startRecording(
+                    targetPackage = pkg,
+                    targetAppLabel = label,
+                    appVersionName = version,
+                    deviceInfo = DeviceInfoProvider.deviceInfo(),
+                    androidVersion = DeviceInfoProvider.androidVersion(),
+                )
+            }
+        }
     }
 
-    private fun onRecordingStopped() {
-        bubble?.hide()
+    private fun discardCurrent() {
+        scope?.launch {
+            Graph.repository.discardRecording()
+            Toast.makeText(this@JourneyAccessibilityService, "Recording discarded", Toast.LENGTH_SHORT)
+                .show()
+        }
     }
+
+    private fun goHome() {
+        startActivity(
+            Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            },
+        )
+    }
+
+    private fun openInApp(extra: String) {
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra(extra, true)
+            },
+        )
+    }
+
+    // --------------------------------------------------------------- result flow
+
+    /** Stop -> save -> surface the result (floating card + notification). */
+    private suspend fun finishAndPresentResult() {
+        val recording = Graph.recorderState.current
+            as? RecorderStateHolder.RecorderState.Recording ?: return
+        Graph.repository.finishRecording()
+
+        val journey = Graph.journeyDao.getJourney(recording.journeyId) ?: return
+        val events = Graph.journeyDao.getEvents(recording.journeyId)
+        val duration = ((journey.endedAt ?: journey.startedAt) - journey.startedAt) / 1000
+        val subtitle = "${events.size} steps · ${duration}s · " +
+            (journey.targetAppLabel ?: journey.targetPackage)
+
+        resultCard?.show(
+            title = journey.name,
+            subtitle = subtitle,
+            actions = ResultCardController.Actions(
+                onOpen = { openJourney(journey.id) },
+                onShare = {
+                    JourneyNotifier.buildShareChooser(this, journey, events)?.let(::startActivity)
+                },
+                onSave = {
+                    scope?.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            ExportManager(this@JourneyAccessibilityService)
+                                .saveToDownloads(journey, events)
+                        }
+                        val message = when (result) {
+                            is ExportResult.Saved -> "Saved to ${result.displayPath}"
+                            is ExportResult.Failed -> result.message
+                        }
+                        Toast.makeText(this@JourneyAccessibilityService, message, Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                },
+                onDelete = {
+                    scope?.launch {
+                        Graph.repository.delete(journey.id)
+                        JourneyNotifier.cancel(this@JourneyAccessibilityService, journey.id)
+                        Toast.makeText(
+                            this@JourneyAccessibilityService,
+                            "Journey deleted",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
+            ),
+        )
+
+        JourneyNotifier.showResult(this, journey, events)
+    }
+
+    private fun openJourney(journeyId: Long) {
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra(JourneyNotifier.EXTRA_OPEN_JOURNEY_ID, journeyId)
+            },
+        )
+    }
+
+    // ------------------------------------------------------------------ helpers
+
+    private fun resolveLauncherPackages(): Set<String> = runCatching {
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        packageManager.queryIntentActivities(intent, 0)
+            .mapNotNull { it.activityInfo?.packageName }
+            .toSet()
+    }.getOrDefault(emptySet())
 
     private fun isTransientSystemPackage(pkg: String): Boolean =
         pkg == "com.android.systemui" ||
@@ -172,14 +328,19 @@ class JourneyAccessibilityService : AccessibilityService() {
         }
         bubble?.dispose()
         bubble = null
+        resultCard?.dispose()
+        resultCard = null
         scope?.cancel()
         scope = null
     }
 
-    private companion object {
-        const val OWN_PACKAGE = "com.ryccoatika.journeyrecorder"
+    companion object {
+        const val EXTRA_OPEN_SETUP = "open_setup"
+        const val EXTRA_OPEN_SETTINGS = "open_settings"
 
-        val SYSTEM_ALLOWLIST = listOf(
+        private const val OWN_PACKAGE = "com.ryccoatika.journeyrecorder"
+
+        private val SYSTEM_ALLOWLIST = listOf(
             "com.android.permissioncontroller",
             "com.google.android.permissioncontroller",
             "com.android.intentresolver",

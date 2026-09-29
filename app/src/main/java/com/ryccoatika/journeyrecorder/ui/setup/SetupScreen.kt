@@ -1,8 +1,14 @@
 package com.ryccoatika.journeyrecorder.ui.setup
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -117,11 +123,28 @@ fun SetupScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
+            // The result notification needs POST_NOTIFICATIONS on 33+ — ask on
+            // Start, and start regardless of the answer (the floating result
+            // card covers the flow without it).
+            val notifLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) { viewModel.start(context) }
             StartBar(
                 selectedApp = selectedApp,
                 enabled = viewModel.canStart,
                 starting = viewModel.starting,
-                onStart = { viewModel.start(context) },
+                onStart = {
+                    val needsNotifPermission = Build.VERSION.SDK_INT >= 33 &&
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) != PackageManager.PERMISSION_GRANTED
+                    if (needsNotifPermission) {
+                        notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        viewModel.start(context)
+                    }
+                },
             )
         },
     ) { innerPadding ->
