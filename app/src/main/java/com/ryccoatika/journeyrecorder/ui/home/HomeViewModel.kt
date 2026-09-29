@@ -2,6 +2,7 @@ package com.ryccoatika.journeyrecorder.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ryccoatika.journeyrecorder.data.AppPrefs
 import com.ryccoatika.journeyrecorder.data.JourneyRepository
 import com.ryccoatika.journeyrecorder.data.db.JourneyDao
 import com.ryccoatika.journeyrecorder.data.db.JourneyEntity
@@ -31,7 +32,16 @@ class HomeViewModel(
     private val repo: JourneyRepository = Graph.repository,
     dao: JourneyDao = Graph.journeyDao,
     state: RecorderStateHolder = Graph.recorderState,
+    private val appPrefs: AppPrefs = Graph.appPrefs,
 ) : ViewModel() {
+
+    val bubbleEnabled: StateFlow<Boolean> = appPrefs
+        .observeBubbleEnabled()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun toggleBubble() {
+        viewModelScope.launch { appPrefs.setBubbleEnabled(!bubbleEnabled.value) }
+    }
 
     val items: StateFlow<List<JourneyListItem>> =
         combine(dao.observeJourneys(), dao.observeEventCounts()) { journeys, counts ->

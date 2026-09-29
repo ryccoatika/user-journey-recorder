@@ -22,9 +22,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.BubbleChart
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.BubbleChart
 import androidx.compose.material.icons.outlined.AppRegistration
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.TouchApp
@@ -80,6 +82,7 @@ fun HomeScreen(
 ) {
     val items by viewModel.items.collectAsState()
     val banner by viewModel.banner.collectAsState()
+    val bubbleEnabled by viewModel.bubbleEnabled.collectAsState()
 
     var renameTarget by remember { mutableStateOf<JourneyListItem?>(null) }
     var deleteTarget by remember { mutableStateOf<JourneyListItem?>(null) }
@@ -92,6 +95,25 @@ fun HomeScreen(
                     Text("Journey Recorder", fontWeight = FontWeight.SemiBold)
                 },
                 actions = {
+                    IconButton(onClick = viewModel::toggleBubble) {
+                        Icon(
+                            if (bubbleEnabled) {
+                                Icons.Filled.BubbleChart
+                            } else {
+                                Icons.Outlined.BubbleChart
+                            },
+                            contentDescription = if (bubbleEnabled) {
+                                "Hide floating button"
+                            } else {
+                                "Show floating button"
+                            },
+                            tint = if (bubbleEnabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             Icons.Filled.Settings,
