@@ -69,6 +69,7 @@ class JourneyAccessibilityService : AccessibilityService() {
             onRecord = { startRecordingForeground() },
             onStop = { scope.launch { finishAndPresentResult() } },
             onDiscard = { discardCurrent() },
+            onTogglePause = { Graph.repository.togglePause() },
             onHome = { goHome() },
             onSettings = { openInApp(EXTRA_OPEN_SETTINGS) },
             onExit = { scope.launch { Graph.appPrefs.setBubbleEnabled(false) } },
@@ -112,6 +113,8 @@ class JourneyAccessibilityService : AccessibilityService() {
 
         val state = Graph.recorderState.current
             as? RecorderStateHolder.RecorderState.Recording ?: return
+        // Capture suspended — keep the journey open but record nothing.
+        if (Graph.recorderState.isPaused) return
         // Own package is ALWAYS excluded — bubble taps are never recorded.
         if (pkg == OWN_PACKAGE || pkg == packageName) return
 

@@ -57,6 +57,12 @@ class JourneyRepository(
         return journeyId
     }
 
+    /** Toggle capture suspension for the active recording. No-op when idle. */
+    fun togglePause() {
+        if (stateHolder.current !is RecorderStateHolder.RecorderState.Recording) return
+        stateHolder.setPaused(!stateHolder.isPaused)
+    }
+
     suspend fun finishRecording(status: JourneyStatus = JourneyStatus.COMPLETED) {
         val state = stateHolder.current as? RecorderStateHolder.RecorderState.Recording ?: return
         pipeline.flushAndEnd()

@@ -50,6 +50,7 @@ class BubbleController(
     private val onRecord: () -> Unit,
     private val onStop: () -> Unit,
     private val onDiscard: () -> Unit,
+    private val onTogglePause: () -> Unit,
     private val onHome: () -> Unit,
     private val onSettings: () -> Unit,
     private val onExit: () -> Unit,
@@ -223,7 +224,8 @@ class BubbleController(
                 FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER),
             )
         } else {
-            // Recording: pulsing red core with the live elapsed timer.
+            // Recording: red core + live timer, pulsing. Paused: amber, static.
+            val paused = stateHolder.isPaused
             val timer = TextView(service).apply {
                 setTextColor(Color.WHITE)
                 textSize = 11f
@@ -234,7 +236,7 @@ class BubbleController(
             val core = FrameLayout(service).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(RED)
+                    setColor(if (paused) AMBER else RED)
                 }
                 addView(timer, FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -246,12 +248,14 @@ class BubbleController(
                 core,
                 FrameLayout.LayoutParams(dp(ORB_DP) - inset * 2, dp(ORB_DP) - inset * 2, Gravity.CENTER),
             )
-            pulseAnimator = ValueAnimator.ofFloat(1f, 0.55f).apply {
-                duration = 700
-                repeatMode = ValueAnimator.REVERSE
-                repeatCount = ValueAnimator.INFINITE
-                addUpdateListener { core.alpha = it.animatedValue as Float }
-                start()
+            if (!paused) {
+                pulseAnimator = ValueAnimator.ofFloat(1f, 0.55f).apply {
+                    duration = 700
+                    repeatMode = ValueAnimator.REVERSE
+                    repeatCount = ValueAnimator.INFINITE
+                    addUpdateListener { core.alpha = it.animatedValue as Float }
+                    start()
+                }
             }
             startTimer(timer, rec.journeyId)
         }
@@ -324,8 +328,14 @@ class BubbleController(
             .setInterpolator(DecelerateInterpolator()).start()
 
         val actions = if (recording != null) {
+            val paused = stateHolder.isPaused
             listOf(
                 Action("■", RED) { collapse(); onStop() },
+                if (paused) {
+                    Action("▶", SURFACE) { collapse(); onTogglePause() }
+                } else {
+                    Action("❙❙", SURFACE) { collapse(); onTogglePause() }
+                },
                 Action("🗑", SURFACE) { collapse(); onDiscard() },
             )
         } else {
@@ -759,6 +769,7 @@ class BubbleController(
         const val TRASH_DP = 60
         const val TRASH_CATCH_DP = 80
         val RED = 0xFFD32F2F.toInt()
+        val AMBER = 0xFFF6A609.toInt()
         val SURFACE = 0xFF2A2B31.toInt()
         val TRASH_BG = 0xFF3A3B41.toInt()
     }
