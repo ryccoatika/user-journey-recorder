@@ -446,28 +446,78 @@ class BubbleController(
         trashIcon = null
     }
 
-    /** Highlight the target when the dragged orb is within catch range. */
-    private fun updateTrashHighlight() {
-        val target = trashRoot ?: return
-        val p = params ?: return
-        val orbCx = p.x + dp(ORB_DP) / 2
-        val orbCy = p.y + dp(ORB_DP) / 2
+    /**
+     * Decide whether the orb is in catch range of the trash target, working in
+     * true screen coordinates. On entering: highlight the target, buzz, and
+     * return the window params (x, y) that snap the orb's center onto the
+     * target's center. Returns null when not over (orb follows the finger).
+     *
+     * [orbScreenCx]/[orbScreenCy] are the orb center in screen space; [originX]/
+     * [originY] convert screen space back to window-param space (they differ by
+     * the window origin, e.g. the status bar inset — the source of the earlier
+     * misalignment). [orbSize] is the orb's on-screen size.
+     */
+    private fun updateTrashHighlight(
+        orbScreenCx: Int,
+        orbScreenCy: Int,
+        originX: Int,
+        originY: Int,
+        orbSize: Int,
+    ): Pair<Int, Int>? {
+        val target = trashRoot ?: return null
         val loc = IntArray(2)
         target.getLocationOnScreen(loc)
         val targetCx = loc[0] + target.width / 2
         val targetCy = loc[1] + target.height / 2
         val dist = kotlin.math.hypot(
-            (orbCx - targetCx).toDouble(),
-            (orbCy - targetCy).toDouble(),
+            (orbScreenCx - targetCx).toDouble(),
+            (orbScreenCy - targetCy).toDouble(),
         )
         val nowOver = dist < dp(TRASH_CATCH_DP)
         if (nowOver != overTrash) {
             overTrash = nowOver
+            if (nowOver) vibrate()
             trashIcon?.apply {
                 (background as? GradientDrawable)?.setColor(if (nowOver) RED else TRASH_BG)
-                animate().scaleX(if (nowOver) 1.25f else 1f)
-                    .scaleY(if (nowOver) 1.25f else 1f).setDuration(120).start()
+                animate().scaleX(if (nowOver) 1.3f else 1f)
+                    .scaleY(if (nowOver) 1.3f else 1f).setDuration(120).start()
             }
+        }
+        return if (nowOver) {
+            // Convert the target's screen center back to window-param space and
+            // offset by half the orb so the orb centers exactly on the target.
+            (targetCx - originX - orbSize / 2) to (targetCy - originY - orbSize / 2)
+        } else {
+            null
+        }
+    }
+
+    private fun vibrate() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vm = service.getSystemService(android.os.VibratorManager::class.java)
+                vm?.defaultVibrator?.vibrate(
+                    android.os.VibrationEffect.createOneShot(
+                        30,
+                        android.os.VibrationEffect.DEFAULT_AMPLITUDE,
+                    ),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val v = service.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v?.vibrate(
+                        android.os.VibrationEffect.createOneShot(
+                            30,
+                            android.os.VibrationEffect.DEFAULT_AMPLITUDE,
+                        ),
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    v?.vibrate(30)
+                }
+            }
+        } catch (_: Throwable) {
         }
     }
 
@@ -506,6 +556,9 @@ class BubbleController(
         private var startX = 0
         private var startY = 0
         private var dragging = false
+        // screenCoord = paramCoord + origin. Measured once per drag.
+        private var originX = 0
+        private var originY = 0
 
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             val p = params ?: return false
@@ -517,6 +570,10 @@ class BubbleController(
                     startX = p.x
                     startY = p.y
                     dragging = false
+                    val loc = IntArray(2)
+                    view.getLocationOnScreen(loc)
+                    originX = loc[0] - p.x
+                    originY = loc[1] - p.y
                     return true
                 }
 
@@ -528,12 +585,28 @@ class BubbleController(
                         showTrashTarget()
                     }
                     if (dragging) {
-                        p.x = (startX + dx).roundToInt()
-                        p.y = (startY + dy).roundToInt()
-                        orbX = p.x
-                        orbY = p.y
+                        val fingerX = (startX + dx).roundToInt()
+                        val fingerY = (startY + dy).roundToInt()
+                        orbX = fingerX
+                        orbY = fingerY
+                        val orbSize = if (view.width > 0) view.width else dp(ORB_DP)
+                        // Over-trash test in true screen coords; when caught, the
+                        // window snaps so the orb centers on the target.
+                        val snap = updateTrashHighlight(
+                            orbScreenCx = fingerX + originX + orbSize / 2,
+                            orbScreenCy = fingerY + originY + orbSize / 2,
+                            originX = originX,
+                            originY = originY,
+                            orbSize = orbSize,
+                        )
+                        if (snap != null) {
+                            p.x = snap.first
+                            p.y = snap.second
+                        } else {
+                            p.x = fingerX
+                            p.y = fingerY
+                        }
                         safeUpdate(view, p)
-                        updateTrashHighlight()
                     }
                     return true
                 }
