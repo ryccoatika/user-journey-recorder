@@ -13,6 +13,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.graphics.drawable.toBitmap
@@ -69,6 +72,10 @@ class BubbleController(
     private var trashIcon: TextView? = null
     private var overTrash = false
 
+    // Expanded-fan views, kept so open/close can animate them radially.
+    private var mainButtonView: View? = null
+    private var fanViews: List<Triple<View, Int, Int>> = emptyList() // view, dx, dy from orb
+
     // Collapsed orb position, kept stable across expand/collapse.
     private var orbX = 0
     private var orbY = 0
@@ -98,6 +105,9 @@ class BubbleController(
             gravity = Gravity.TOP or Gravity.START
             x = screenWidth - dp(ORB_DP + 8)
             y = dp(120)
+            // No OS window transition on resize/reposition — expand/collapse
+            // animate their own content, so the window itself must not slide.
+            windowAnimations = 0
         }
         orbX = layoutParams.x
         orbY = layoutParams.y
@@ -169,6 +179,8 @@ class BubbleController(
         cancelJobs()
         expanded = false
         container.removeAllViews()
+        mainButtonView = null
+        fanViews = emptyList()
 
         // Restore collapsed window size/position.
         params?.let { p ->
@@ -287,6 +299,13 @@ class BubbleController(
         // Main button (tap to collapse) sits where the orb was.
         val main = circleButton(if (recording != null) "‖" else "✕", SURFACE) { collapse() }
         addAt(container, main, orbCx, orbCy, orbSize)
+        mainButtonView = main
+        // Grow in place from the orb.
+        main.scaleX = 0.5f
+        main.scaleY = 0.5f
+        main.alpha = 0f
+        main.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150)
+            .setInterpolator(DecelerateInterpolator()).start()
 
         val actions = if (recording != null) {
             listOf(
@@ -306,6 +325,7 @@ class BubbleController(
 
         val radius = dp(RADIUS_DP)
         val n = actions.size
+        val views = mutableListOf<Triple<View, Int, Int>>()
         actions.forEachIndexed { i, action ->
             // Fan across a quarter arc from horizontal to vertical, into the
             // grow direction.
@@ -319,13 +339,53 @@ class BubbleController(
                 circleButton(action.glyph, action.bg, action.onClick)
             }
             addAt(container, btn, orbCx + dx, orbCy + dy, dp(BTN_DP))
+            views += Triple(btn, dx, dy)
+            // Start each button collapsed onto the orb, then spring outward.
+            btn.translationX = -dx.toFloat()
+            btn.translationY = -dy.toFloat()
+            btn.scaleX = 0.3f
+            btn.scaleY = 0.3f
+            btn.alpha = 0f
+            btn.animate()
+                .translationX(0f).translationY(0f)
+                .scaleX(1f).scaleY(1f).alpha(1f)
+                .setStartDelay(i * 25L)
+                .setDuration(200)
+                .setInterpolator(OvershootInterpolator(1.6f))
+                .start()
         }
+        fanViews = views
 
         armAutoCollapse()
     }
 
     private fun collapse() {
-        renderCollapsed()
+        if (!expanded) {
+            renderCollapsed()
+            return
+        }
+        expanded = false
+        collapseJob?.cancel()
+        val views = fanViews
+        val main = mainButtonView
+        if (views.isEmpty() && main == null) {
+            renderCollapsed()
+            return
+        }
+        // Retract each button back into the orb, then rebuild the collapsed orb.
+        views.forEach { (btn, dx, dy) ->
+            btn.animate()
+                .translationX(-dx.toFloat()).translationY(-dy.toFloat())
+                .scaleX(0.3f).scaleY(0.3f).alpha(0f)
+                .setDuration(140)
+                .setInterpolator(AccelerateInterpolator())
+                .start()
+        }
+        main?.animate()?.scaleX(0.5f)?.scaleY(0.5f)?.alpha(0f)?.setDuration(130)?.start()
+        uiScope?.launch {
+            delay(150)
+            renderCollapsed()
+        }
     }
 
     private fun armAutoCollapse() {
