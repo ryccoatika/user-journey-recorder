@@ -327,7 +327,6 @@ class BubbleController(
             listOf(
                 Action("■", RED) { collapse(); onStop() },
                 Action("🗑", SURFACE) { collapse(); onDiscard() },
-                Action("⚙", SURFACE) { collapse(); onSettings() },
             )
         } else {
             // Close/stop the idle bubble by dragging it to the trash target,
