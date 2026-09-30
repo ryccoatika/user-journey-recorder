@@ -72,7 +72,13 @@ class BubbleController(
     private var trashIcon: TextView? = null
     private var overTrash = false
 
-    // Expanded-fan views, kept so open/close can animate them radially.
+    // Collapsed orb view (lives in [root], which never resizes/moves except by drag).
+    private var orbView: View? = null
+
+    // Expanded fan lives in its OWN window so the orb window never has to
+    // resize/reposition (that resize was the source of the collapse "jump").
+    private var fanRoot: FrameLayout? = null
+    private var fanParams: WindowManager.LayoutParams? = null
     private var mainButtonView: View? = null
     private var fanViews: List<Triple<View, Int, Int>> = emptyList() // view, dx, dy from orb
 
@@ -143,8 +149,10 @@ class BubbleController(
     fun disable() {
         cancelJobs()
         hideTrashTarget()
+        removeFan()
         uiScope?.cancel()
         uiScope = null
+        orbView = null
         root?.let { view ->
             try {
                 windowManager.removeView(view)
@@ -178,20 +186,13 @@ class BubbleController(
         val container = root ?: return
         cancelJobs()
         expanded = false
+        removeFan()
         container.removeAllViews()
-        mainButtonView = null
-        fanViews = emptyList()
 
-        // Restore collapsed window size/position.
-        params?.let { p ->
-            p.width = WindowManager.LayoutParams.WRAP_CONTENT
-            p.height = WindowManager.LayoutParams.WRAP_CONTENT
-            p.x = orbX
-            p.y = orbY
-            safeUpdate(container, p)
-        }
-
+        // The orb window stays WRAP-sized and only moves by drag, so there is
+        // nothing to resize/reposition here — no collapse "jump".
         val orb = buildOrb()
+        orbView = orb
         container.addView(orb, FrameLayout.LayoutParams(dp(ORB_DP), dp(ORB_DP)))
         orb.setOnTouchListener(DragListener())
     }
@@ -272,31 +273,46 @@ class BubbleController(
     // -------------------------------------------------------------- expanded fan
 
     private fun expand() {
-        val container = root ?: return
-        val p = params ?: return
+        if (expanded) return
         cancelJobs()
         expanded = true
-        container.removeAllViews()
 
         val fanDown = orbY < screenHeight / 2
         val fanLeft = orbX + dp(ORB_DP) / 2 > screenWidth / 2
 
         val exp = dp(EXP_DP)
         val orbSize = dp(ORB_DP)
-        // Pin the orb to its collapsed screen position; grow the window toward
-        // the fan direction.
+        // Fan window overlays the orb: its orb-slot lines up with the orb's
+        // screen position; it grows toward the fan direction. The orb's own
+        // window is left untouched (just hidden), so nothing resizes/jumps.
         val orbLeft = if (fanLeft) exp - orbSize else 0
         val orbTop = if (fanDown) 0 else exp - orbSize
-        p.width = exp
-        p.height = exp
-        p.x = orbX - orbLeft
-        p.y = orbY - orbTop
-        safeUpdate(container, p)
+        val fp = WindowManager.LayoutParams(
+            exp,
+            exp,
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = orbX - orbLeft
+            y = orbY - orbTop
+            windowAnimations = 0
+        }
+        val container = FrameLayout(service)
+        if (!addOverlay(container, fp)) {
+            expanded = false
+            return
+        }
+        fanRoot = container
+        fanParams = fp
+        orbView?.visibility = View.INVISIBLE
 
         val orbCx = orbLeft + orbSize / 2
         val orbCy = orbTop + orbSize / 2
 
-        // Main button (tap to collapse) sits where the orb was.
+        // Main button (tap to collapse) sits exactly over the hidden orb.
         val main = circleButton(if (recording != null) "‖" else "✕", SURFACE) { collapse() }
         addAt(container, main, orbCx, orbCy, orbSize)
         mainButtonView = main
@@ -361,7 +377,8 @@ class BubbleController(
 
     private fun collapse() {
         if (!expanded) {
-            renderCollapsed()
+            removeFan()
+            orbView?.visibility = View.VISIBLE
             return
         }
         expanded = false
@@ -369,10 +386,12 @@ class BubbleController(
         val views = fanViews
         val main = mainButtonView
         if (views.isEmpty() && main == null) {
-            renderCollapsed()
+            removeFan()
+            orbView?.visibility = View.VISIBLE
             return
         }
-        // Retract each button back into the orb, then rebuild the collapsed orb.
+        // Retract each button back into the (hidden) orb, then drop the fan
+        // window and reveal the orb — the orb window never moved, so no jump.
         views.forEach { (btn, dx, dy) ->
             btn.animate()
                 .translationX(-dx.toFloat()).translationY(-dy.toFloat())
@@ -384,7 +403,41 @@ class BubbleController(
         main?.animate()?.scaleX(0.5f)?.scaleY(0.5f)?.alpha(0f)?.setDuration(130)?.start()
         uiScope?.launch {
             delay(150)
-            renderCollapsed()
+            removeFan()
+            orbView?.visibility = View.VISIBLE
+        }
+    }
+
+    private fun removeFan() {
+        mainButtonView = null
+        fanViews = emptyList()
+        fanRoot?.let { view ->
+            try {
+                windowManager.removeView(view)
+            } catch (_: Throwable) {
+            }
+        }
+        fanRoot = null
+        fanParams = null
+    }
+
+    /** Add an overlay window, falling back to non-a11y types if the first fails. */
+    private fun addOverlay(view: View, lp: WindowManager.LayoutParams): Boolean = try {
+        windowManager.addView(view, lp)
+        true
+    } catch (_: Throwable) {
+        lp.type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+        lp.alpha = 0.9f
+        try {
+            windowManager.addView(view, lp)
+            true
+        } catch (_: Throwable) {
+            false
         }
     }
 
