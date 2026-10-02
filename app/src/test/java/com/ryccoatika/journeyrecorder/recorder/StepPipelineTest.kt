@@ -33,7 +33,7 @@ class StepPipelineTest {
         // Unused surface.
         override suspend fun insertJourney(journey: JourneyEntity): Long = 0
         override suspend fun rename(id: Long, name: String) = Unit
-        override suspend fun finish(id: Long, endedAt: Long, status: JourneyStatus) = Unit
+        override suspend fun finish(id: Long, endedAt: Long, status: JourneyStatus, pausedMs: Long) = Unit
         override suspend fun setNoElementIds(id: Long, noElementIds: Boolean) = Unit
         override suspend fun deleteJourney(id: Long) = Unit
         override fun observeJourneys(): Flow<List<JourneyEntity>> = emptyFlow()

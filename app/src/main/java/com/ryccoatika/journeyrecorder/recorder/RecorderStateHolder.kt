@@ -60,9 +60,12 @@ class RecorderStateHolder {
      */
     fun recordedElapsedMs(startedAt: Long): Long {
         val now = System.currentTimeMillis()
-        val pausedSoFar = accumulatedPausedMs + if (_paused.value) now - pausedAtMs else 0L
-        return (now - startedAt - pausedSoFar).coerceAtLeast(0L)
+        return (now - startedAt - totalPausedMs()).coerceAtLeast(0L)
     }
+
+    /** Total paused time so far (including an in-progress pause). */
+    fun totalPausedMs(): Long =
+        accumulatedPausedMs + if (_paused.value) System.currentTimeMillis() - pausedAtMs else 0L
 
     fun setServiceConnected(connected: Boolean) {
         _serviceConnected.value = connected

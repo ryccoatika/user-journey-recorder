@@ -66,7 +66,7 @@ class JourneyRepository(
     suspend fun finishRecording(status: JourneyStatus = JourneyStatus.COMPLETED) {
         val state = stateHolder.current as? RecorderStateHolder.RecorderState.Recording ?: return
         pipeline.flushAndEnd()
-        dao.finish(state.journeyId, System.currentTimeMillis(), status)
+        dao.finish(state.journeyId, System.currentTimeMillis(), status, stateHolder.totalPausedMs())
         stateHolder.setIdle()
     }
 
@@ -89,7 +89,7 @@ class JourneyRepository(
         for (journey in dao.getUnfinishedJourneys()) {
             if (journey.id == recordingId) continue
             val endedAt = dao.getLastEventTime(journey.id) ?: journey.startedAt
-            dao.finish(journey.id, endedAt, JourneyStatus.RECOVERED)
+            dao.finish(journey.id, endedAt, JourneyStatus.RECOVERED, journey.pausedMs)
         }
     }
 

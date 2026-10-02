@@ -325,7 +325,7 @@ private fun JourneyRow(
                         text = "${item.stepCount} steps",
                         icon = Icons.Outlined.TouchApp,
                     )
-                    formatDuration(journey.startedAt, journey.endedAt)?.let {
+                    formatDuration(journey.startedAt, journey.endedAt, journey.pausedMs)?.let {
                         InfoChip(text = it, icon = Icons.Filled.Schedule)
                     }
                     if (isRecording) {

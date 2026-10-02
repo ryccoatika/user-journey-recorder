@@ -14,6 +14,8 @@ data class JourneyEntity(
     val androidVersion: String,
     val startedAt: Long,
     val endedAt: Long? = null,
+    // Total time spent paused; excluded from the reported recording duration.
+    val pausedMs: Long = 0,
     val status: JourneyStatus = JourneyStatus.COMPLETED,
     // true when the target exposed zero view resource-ids at recording start
     val noElementIds: Boolean = false,

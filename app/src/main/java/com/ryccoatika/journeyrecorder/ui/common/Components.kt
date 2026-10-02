@@ -142,9 +142,9 @@ fun versionLabel(versionName: String): String =
     if (versionName.startsWith("v", ignoreCase = true)) versionName else "v$versionName"
 
 /** "2m 14s" / "45s" duration formatting shared by Home and Detail. */
-fun formatDuration(startedAt: Long, endedAt: Long?): String? {
+fun formatDuration(startedAt: Long, endedAt: Long?, pausedMs: Long = 0): String? {
     endedAt ?: return null
-    val totalSec = ((endedAt - startedAt) / 1000).coerceAtLeast(0)
+    val totalSec = ((endedAt - startedAt - pausedMs) / 1000).coerceAtLeast(0)
     val min = totalSec / 60
     val sec = totalSec % 60
     return if (min > 0) "${min}m ${sec}s" else "${sec}s"

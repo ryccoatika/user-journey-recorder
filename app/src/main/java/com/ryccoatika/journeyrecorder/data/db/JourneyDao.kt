@@ -16,8 +16,8 @@ interface JourneyDao {
     @Query("UPDATE journeys SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
 
-    @Query("UPDATE journeys SET endedAt = :endedAt, status = :status WHERE id = :id")
-    suspend fun finish(id: Long, endedAt: Long, status: JourneyStatus)
+    @Query("UPDATE journeys SET endedAt = :endedAt, status = :status, pausedMs = :pausedMs WHERE id = :id")
+    suspend fun finish(id: Long, endedAt: Long, status: JourneyStatus, pausedMs: Long)
 
     @Query("UPDATE journeys SET noElementIds = :noElementIds WHERE id = :id")
     suspend fun setNoElementIds(id: Long, noElementIds: Boolean)

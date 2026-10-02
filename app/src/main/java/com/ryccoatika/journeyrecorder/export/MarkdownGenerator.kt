@@ -56,7 +56,9 @@ object MarkdownGenerator {
             append(formatter.format(Date(journey.startedAt)))
             val endedAt = journey.endedAt
             if (endedAt != null) {
-                val durationSeconds = ((endedAt - journey.startedAt) / 1000.0).roundToLong()
+                val durationSeconds =
+                    (((endedAt - journey.startedAt - journey.pausedMs).coerceAtLeast(0)) / 1000.0)
+                        .roundToLong()
                 append(" (").append(durationSeconds).append("s)")
             }
         }
