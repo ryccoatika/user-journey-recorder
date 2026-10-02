@@ -59,11 +59,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.ThemeMode
 import com.ryccoatika.journeyrecorder.ui.common.TargetAppIcon
 import kotlinx.coroutines.launch
@@ -91,6 +93,7 @@ fun SettingsScreen(
         }.getOrNull() ?: "?"
     }
 
+    val noStoreMessage = stringResource(R.string.settings_no_play_store)
     val rateApp: () -> Unit = {
         val pkg = context.packageName
         // Prefer the Play Store app; fall back to the web listing in a browser.
@@ -105,7 +108,7 @@ fun SettingsScreen(
             try {
                 context.startActivity(web)
             } catch (_: ActivityNotFoundException) {
-                scope.launch { snackbarHostState.showSnackbar("No Play Store or browser available") }
+                scope.launch { snackbarHostState.showSnackbar(noStoreMessage) }
             }
         }
     }
@@ -129,10 +132,13 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.settings_back),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -153,29 +159,29 @@ fun SettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.Palette,
-                    title = "Theme",
+                    title = stringResource(R.string.settings_theme),
                     subtitle = themeModeLabel(themeMode),
                     onClick = { showThemeDialog = true },
                 )
                 RowDivider()
                 SettingsRow(
                     icon = Icons.Filled.PlayCircleOutline,
-                    title = "How it works",
-                    subtitle = "Replay the intro — what it does and on-device privacy",
+                    title = stringResource(R.string.settings_how_it_works_title),
+                    subtitle = stringResource(R.string.settings_how_it_works_subtitle),
                     onClick = onOpenOnboarding,
                 )
                 RowDivider()
                 SettingsRow(
                     icon = Icons.AutoMirrored.Filled.HelpOutline,
-                    title = "Recording guide",
-                    subtitle = "Why some apps expose no element IDs, tips for reliable recordings",
+                    title = stringResource(R.string.settings_recording_guide_title),
+                    subtitle = stringResource(R.string.settings_recording_guide_subtitle),
                     onClick = onOpenGuide,
                 )
                 RowDivider()
                 SettingsRow(
                     icon = Icons.Filled.Accessibility,
-                    title = "Accessibility settings",
-                    subtitle = "Enable or restart the capture service",
+                    title = stringResource(R.string.settings_accessibility_title),
+                    subtitle = stringResource(R.string.settings_accessibility_subtitle),
                     onClick = {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
@@ -184,22 +190,22 @@ fun SettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.StarRate,
-                    title = "Rate this app",
-                    subtitle = "Leave a review on Google Play",
+                    title = stringResource(R.string.settings_rate_title),
+                    subtitle = stringResource(R.string.settings_rate_subtitle),
                     onClick = rateApp,
                 )
                 RowDivider()
                 SettingsRow(
                     icon = Icons.Filled.MailOutline,
-                    title = "Contact developer",
-                    subtitle = "Send a suggestion, question, or bug report",
+                    title = stringResource(R.string.settings_contact_title),
+                    subtitle = stringResource(R.string.settings_contact_subtitle),
                     onClick = onOpenContactDeveloper,
                 )
                 RowDivider()
                 SettingsRow(
                     icon = Icons.Filled.Info,
-                    title = "About",
-                    subtitle = "Version $versionName",
+                    title = stringResource(R.string.settings_about_title),
+                    subtitle = stringResource(R.string.settings_version, versionName),
                     onClick = { showAboutDialog = true },
                 )
             }
@@ -215,7 +221,7 @@ private fun ThemeDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Theme") },
+        title = { Text(stringResource(R.string.settings_theme)) },
         text = {
             Column {
                 ThemeMode.entries.forEach { mode ->
@@ -238,7 +244,7 @@ private fun ThemeDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) }
         },
     )
 }
@@ -256,43 +262,41 @@ private fun AboutDialog(versionName: String, onDismiss: () -> Unit) {
                 TargetAppIcon(packageName = context.packageName, size = 64.dp)
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Journey Recorder",
+                    text = stringResource(R.string.settings_about_app_name),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "Version $versionName",
+                    text = stringResource(R.string.settings_version, versionName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Internal SQA tool that records user journeys in other apps " +
-                        "and exports them as markdown for test automation. Journeys stay " +
-                        "on this device until you export them; passwords and sensitive " +
-                        "fields are masked at capture.",
+                    text = stringResource(R.string.settings_about_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "© Rycco Atika",
+                    text = stringResource(R.string.settings_about_copyright),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_about_close)) }
         },
     )
 }
 
+@Composable
 private fun themeModeLabel(mode: ThemeMode): String = when (mode) {
-    ThemeMode.SYSTEM -> "Follow system"
-    ThemeMode.LIGHT -> "Light"
-    ThemeMode.DARK -> "Dark"
+    ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system)
+    ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
+    ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
 }
 
 @Composable

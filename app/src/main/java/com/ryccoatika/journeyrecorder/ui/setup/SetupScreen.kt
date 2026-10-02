@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.ui.common.versionLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,10 +112,18 @@ fun SetupScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("New recording", fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        stringResource(R.string.setup_title),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.setup_back),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -160,25 +170,20 @@ fun SetupScreen(
                 ReadyRow()
             } else {
                 Text(
-                    text = "Before you start",
+                    text = stringResource(R.string.setup_before_you_start),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
                 PermissionRow(
-                    title = "Accessibility service",
+                    title = stringResource(R.string.setup_perm_accessibility_title),
                     ok = false,
                     required = true,
                     description = when {
                         viewModel.accessibilityEnabled ->
-                            "Enabled but not running (e.g. after a force-stop). Open " +
-                                "Accessibility settings and toggle \"Journey Recorder\" " +
-                                "off and on again."
+                            stringResource(R.string.setup_perm_accessibility_desc_enabled)
                         else ->
-                            "Required to capture steps. Enable \"Journey Recorder\" under " +
-                                "Installed apps in Accessibility settings.\n\nOn Android 13+ a " +
-                                "sideloaded app may show \"Restricted setting\": install via " +
-                                "adb, or open App info > menu > Allow restricted settings first."
+                            stringResource(R.string.setup_perm_accessibility_desc_disabled)
                     },
                     onFix = {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -188,12 +193,10 @@ fun SetupScreen(
                     Column {
                         Spacer(Modifier.height(8.dp))
                         PermissionRow(
-                            title = "Display over other apps",
+                            title = stringResource(R.string.setup_perm_overlay_title),
                             ok = viewModel.overlayGranted,
                             required = false,
-                            description = "Optional fallback for the floating stop bubble. " +
-                                "The bubble normally uses the accessibility overlay, which " +
-                                "needs no extra permission.",
+                            description = stringResource(R.string.setup_perm_overlay_desc),
                             onFix = {
                                 context.startActivity(
                                     Intent(
@@ -209,7 +212,7 @@ fun SetupScreen(
 
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "App to record",
+                text = stringResource(R.string.setup_app_to_record),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 8.dp),
@@ -218,7 +221,7 @@ fun SetupScreen(
                 value = viewModel.query,
                 onValueChange = { viewModel.query = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search apps") },
+                placeholder = { Text(stringResource(R.string.setup_search_apps)) },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
@@ -270,7 +273,7 @@ private fun ReadyRow() {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                text = "Recorder ready — pick the app to record",
+                text = stringResource(R.string.setup_recorder_ready),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
             )
@@ -317,7 +320,7 @@ private fun StartBar(
                 }
             } else {
                 Text(
-                    text = "Select an app to record",
+                    text = stringResource(R.string.setup_select_app),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
@@ -325,7 +328,13 @@ private fun StartBar(
             }
             Spacer(Modifier.width(12.dp))
             Button(onClick = onStart, enabled = enabled) {
-                Text(if (starting) "Starting…" else "Start recording")
+                Text(
+                    if (starting) {
+                        stringResource(R.string.setup_starting)
+                    } else {
+                        stringResource(R.string.setup_start_recording)
+                    },
+                )
             }
         }
     }
@@ -359,7 +368,11 @@ private fun PermissionRow(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (required) "$title (required)" else "$title (optional)",
+                    text = if (required) {
+                        stringResource(R.string.setup_title_required, title)
+                    } else {
+                        stringResource(R.string.setup_title_optional, title)
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -372,7 +385,7 @@ private fun PermissionRow(
             }
             if (!ok) {
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onFix) { Text("Fix") }
+                TextButton(onClick = onFix) { Text(stringResource(R.string.setup_fix)) }
             }
         }
     }

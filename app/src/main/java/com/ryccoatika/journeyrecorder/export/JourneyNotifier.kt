@@ -53,8 +53,12 @@ object JourneyNotifier {
         val journeyId = journey.id
         val app = journey.targetAppLabel ?: journey.targetPackage
         val time = "%d:%02d".format(elapsedSec / 60, elapsedSec % 60)
-        val title = if (paused) "Recording paused" else "Recording $app"
-        val text = "$stepCount steps · $time"
+        val title = if (paused) {
+            context.getString(R.string.notif_recording_paused)
+        } else {
+            context.getString(R.string.notif_recording_app, app)
+        }
+        val text = context.getString(R.string.notif_steps_subtitle, stepCount, time)
 
         val tap = PendingIntent.getActivity(
             context,
@@ -88,17 +92,19 @@ object JourneyNotifier {
             .setColorized(true)
             .addAction(
                 0,
-                "Stop",
+                context.getString(R.string.notif_action_stop),
                 broadcast(JourneyActionReceiver.ACTION_STOP_RECORDING, 91_001),
             )
             .addAction(
                 0,
-                if (paused) "Resume" else "Pause",
+                context.getString(
+                    if (paused) R.string.notif_action_resume else R.string.notif_action_pause,
+                ),
                 broadcast(JourneyActionReceiver.ACTION_PAUSE_RECORDING, 91_002),
             )
             .addAction(
                 0,
-                "Discard",
+                context.getString(R.string.notif_action_discard),
                 broadcast(JourneyActionReceiver.ACTION_DISCARD_RECORDING, 91_003),
             )
 
@@ -135,10 +141,10 @@ object JourneyNotifier {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(
                 RECORDING_CHANNEL_ID,
-                "Recording in progress",
+                context.getString(R.string.notif_channel_recording_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = "Live recording status with stop / pause controls"
+                description = context.getString(R.string.notif_channel_recording_desc)
                 setShowBadge(false)
             },
         )
@@ -179,23 +185,31 @@ object JourneyNotifier {
                 flags,
             )
 
-        val subtitle = buildString {
-            append(events.size)
-            append(" steps · ")
-            append(journey.targetAppLabel ?: journey.targetPackage)
-        }
+        val subtitle = context.getString(
+            R.string.notif_steps_subtitle,
+            events.size,
+            journey.targetAppLabel ?: journey.targetPackage,
+        )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_record)
-            .setContentTitle("Journey saved")
+            .setContentTitle(context.getString(R.string.notif_journey_saved))
             .setContentText(subtitle)
             .setStyle(NotificationCompat.BigTextStyle().bigText("${journey.name}\n$subtitle"))
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
-            .addAction(0, "Save", broadcast(JourneyActionReceiver.ACTION_SAVE, 200_000))
-            .addAction(0, "Delete", broadcast(JourneyActionReceiver.ACTION_DELETE, 300_000))
+            .addAction(
+                0,
+                context.getString(R.string.notif_action_save),
+                broadcast(JourneyActionReceiver.ACTION_SAVE, 200_000),
+            )
+            .addAction(
+                0,
+                context.getString(R.string.notif_action_delete),
+                broadcast(JourneyActionReceiver.ACTION_DELETE, 300_000),
+            )
         if (shareIntent != null) {
-            builder.addAction(0, "Share", shareIntent)
+            builder.addAction(0, context.getString(R.string.notif_action_share), shareIntent)
         }
 
         try {
@@ -246,7 +260,7 @@ object JourneyNotifier {
             if (markdown.length <= 100_000) putExtra(Intent.EXTRA_TEXT, markdown)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        Intent.createChooser(send, "Share journey").apply {
+        Intent.createChooser(send, context.getString(R.string.notif_share_chooser_title)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     } catch (_: Exception) {
@@ -259,10 +273,10 @@ object JourneyNotifier {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "Journey results",
+                context.getString(R.string.notif_channel_results_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = "Shown when a recording finishes, with export shortcuts"
+                description = context.getString(R.string.notif_channel_results_desc)
             },
         )
     }

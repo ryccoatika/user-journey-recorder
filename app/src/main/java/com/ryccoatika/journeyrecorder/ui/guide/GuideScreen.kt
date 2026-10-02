@@ -27,9 +27,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ryccoatika.journeyrecorder.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,10 +40,18 @@ fun GuideScreen(onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Recording guide", fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        stringResource(R.string.guide_top_bar_title),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.guide_back),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -57,87 +67,51 @@ fun GuideScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            SectionTitle("Why are element IDs sometimes missing?")
-            BodyText(
-                "Journey Recorder reads the accessibility tree of the app you record. " +
-                    "Whether an element has a stable ID depends entirely on how the " +
-                    "target app was built. When IDs are missing, steps fall back to " +
-                    "text, content descriptions and screen coordinates — the exported " +
-                    "markdown marks those steps so your automation can use text-based " +
-                    "selectors instead.",
-            )
+            SectionTitle(stringResource(R.string.guide_section_ids_title))
+            BodyText(stringResource(R.string.guide_section_ids_body))
             Spacer(Modifier.height(16.dp))
 
             FrameworkCard(
-                name = "Classic Android (XML Views)",
+                name = stringResource(R.string.guide_fw_classic_name),
                 support = Support.FULL,
-                summary = "Full element IDs (e.g. com.app:id/login_button), text and " +
-                    "descriptions. Best possible recording quality.",
+                summary = stringResource(R.string.guide_fw_classic_summary),
             )
             FrameworkCard(
-                name = "Jetpack Compose",
+                name = stringResource(R.string.guide_fw_compose_name),
                 support = Support.PARTIAL,
-                summary = "No element IDs — Compose UIs are not built from Views, so " +
-                    "there is nothing to report. Button text and content descriptions " +
-                    "still come through and work well as locators.",
-                tip = "For your own apps: set Modifier.semantics { testTagsAsResourceId " +
-                    "= true } on the root composable and add Modifier.testTag(\"…\") to " +
-                    "key elements — their tags then appear as element IDs when recording.",
+                summary = stringResource(R.string.guide_fw_compose_summary),
+                tip = stringResource(R.string.guide_fw_compose_tip),
             )
             FrameworkCard(
-                name = "Flutter",
+                name = stringResource(R.string.guide_fw_flutter_name),
                 support = Support.PARTIAL,
-                summary = "No element IDs, ever — Flutter draws its own UI and only " +
-                    "exposes what the app labels with Semantics. Labeled buttons and " +
-                    "visible text are captured; unlabeled icons show as coordinates only.",
-                tip = "For your own apps: wrap key widgets in Semantics(label: \"…\") — " +
-                    "labels are captured as content descriptions.",
+                summary = stringResource(R.string.guide_fw_flutter_summary),
+                tip = stringResource(R.string.guide_fw_flutter_tip),
             )
             FrameworkCard(
-                name = "React Native",
+                name = stringResource(R.string.guide_fw_rn_name),
                 support = Support.PARTIAL,
-                summary = "No element IDs — testID is invisible to accessibility on " +
-                    "Android. Visible text and accessibilityLabel values are captured " +
-                    "and usually make good locators.",
-                tip = "For your own apps: set accessibilityLabel on touchable elements — " +
-                    "it is captured as a content description.",
+                summary = stringResource(R.string.guide_fw_rn_summary),
+                tip = stringResource(R.string.guide_fw_rn_tip),
             )
             FrameworkCard(
-                name = "WebView / Ionic / Cordova",
+                name = stringResource(R.string.guide_fw_webview_name),
                 support = Support.PARTIAL,
-                summary = "HTML id attributes usually appear as element IDs, plus link " +
-                    "and button text. The tree can be briefly empty right after a page " +
-                    "loads — pause a moment before tapping.",
+                summary = stringResource(R.string.guide_fw_webview_summary),
             )
             FrameworkCard(
-                name = "Games / Unity / canvas UIs",
+                name = stringResource(R.string.guide_fw_games_name),
                 support = Support.NONE,
-                summary = "No accessibility tree at all — taps inside these apps cannot " +
-                    "be captured.",
+                summary = stringResource(R.string.guide_fw_games_summary),
             )
 
-            SectionTitle("Tips for reliable recordings")
-            Bullet("Tap deliberately, one action at a time — rapid taps can merge.")
-            Bullet(
-                "Swipes, pinch and drag gestures are not captured — only taps, typing " +
-                    "and scrolls. Add a note manually to the markdown if a flow needs one.",
-            )
-            Bullet(
-                "Review the journey before exporting: typed values are shown in the " +
-                    "step list with a redact button — remove anything sensitive.",
-            )
-            Bullet(
-                "Passwords and fields that look sensitive (PIN, OTP, CVV, card number) " +
-                    "are masked automatically and never stored.",
-            )
-            Bullet(
-                "Some banking apps block accessibility services entirely and cannot " +
-                    "be recorded.",
-            )
-            Bullet(
-                "If the recorder stops unexpectedly (battery managers can kill it), " +
-                    "the journey is kept and marked \"recovered\".",
-            )
+            SectionTitle(stringResource(R.string.guide_section_tips_title))
+            Bullet(stringResource(R.string.guide_tip_deliberate))
+            Bullet(stringResource(R.string.guide_tip_gestures))
+            Bullet(stringResource(R.string.guide_tip_review))
+            Bullet(stringResource(R.string.guide_tip_masking))
+            Bullet(stringResource(R.string.guide_tip_banking))
+            Bullet(stringResource(R.string.guide_tip_recovered))
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -168,17 +142,17 @@ private fun BodyText(text: String) {
 private fun SupportBadge(support: Support) {
     val (label, container, content) = when (support) {
         Support.FULL -> Triple(
-            "full IDs",
+            stringResource(R.string.guide_badge_full),
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
         )
         Support.PARTIAL -> Triple(
-            "text locators",
+            stringResource(R.string.guide_badge_partial),
             MaterialTheme.colorScheme.tertiaryContainer,
             MaterialTheme.colorScheme.onTertiaryContainer,
         )
         Support.NONE -> Triple(
-            "not recordable",
+            stringResource(R.string.guide_badge_none),
             MaterialTheme.colorScheme.errorContainer,
             MaterialTheme.colorScheme.onErrorContainer,
         )

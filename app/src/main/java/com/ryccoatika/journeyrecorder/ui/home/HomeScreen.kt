@@ -79,11 +79,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
 import com.ryccoatika.journeyrecorder.ui.common.InfoChip
 import com.ryccoatika.journeyrecorder.ui.common.PulsingRecordDot
@@ -153,7 +155,7 @@ fun HomeScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Journey Recorder", fontWeight = FontWeight.SemiBold) },
+                    title = { Text(stringResource(R.string.home_title), fontWeight = FontWeight.SemiBold) },
                     actions = {
                         AnimatedVisibility(
                             visible = !scrollSignals.searchFieldExpanded,
@@ -166,7 +168,7 @@ fun HomeScreen(
                             }) {
                                 Icon(
                                     Icons.Filled.Search,
-                                    contentDescription = "Search",
+                                    contentDescription = stringResource(R.string.home_search),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -180,7 +182,7 @@ fun HomeScreen(
                                 ) {
                                     Toast.makeText(
                                         context,
-                                        "Enable Journey Recorder to show the floating button",
+                                        context.getString(R.string.home_bubble_enable_a11y),
                                         Toast.LENGTH_LONG,
                                     ).show()
                                     context.startActivity(
@@ -192,9 +194,9 @@ fun HomeScreen(
                             Icon(
                                 if (bubbleEnabled) Icons.Filled.BubbleChart else Icons.Outlined.BubbleChart,
                                 contentDescription = if (bubbleEnabled) {
-                                    "Hide floating button"
+                                    stringResource(R.string.home_bubble_hide)
                                 } else {
-                                    "Show floating button"
+                                    stringResource(R.string.home_bubble_show)
                                 },
                                 tint = if (bubbleEnabled) {
                                     MaterialTheme.colorScheme.primary
@@ -206,7 +208,7 @@ fun HomeScreen(
                         IconButton(onClick = onOpenSettings) {
                             Icon(
                                 Icons.Filled.Settings,
-                                contentDescription = "Settings",
+                                contentDescription = stringResource(R.string.home_settings),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -231,7 +233,7 @@ fun HomeScreen(
                 ExtendedFloatingActionButton(
                     onClick = onNewRecording,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text("New recording") },
+                    text = { Text(stringResource(R.string.home_new_recording)) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -267,7 +269,7 @@ fun HomeScreen(
                 ) {
                     SearchField(
                         query = queryInput,
-                        placeholder = "Search journeys",
+                        placeholder = stringResource(R.string.home_search_placeholder),
                         onQueryChange = { queryInput = it },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -280,7 +282,7 @@ fun HomeScreen(
                                     queryInput = ""
                                     viewModel.setQuery("")
                                 }) {
-                                    Icon(Icons.Outlined.Close, contentDescription = "Clear search")
+                                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.home_clear_search))
                                 }
                             }
                         } else {
@@ -301,7 +303,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "No journeys match \"${queryInput.trim()}\"",
+                            stringResource(R.string.home_no_match, queryInput.trim()),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -367,12 +369,9 @@ fun HomeScreen(
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Delete journey?") },
+            title = { Text(stringResource(R.string.home_delete_journey_title)) },
             text = {
-                Text(
-                    "\"${target.journey.name}\" and all its recorded steps will be " +
-                        "deleted. This cannot be undone.",
-                )
+                Text(stringResource(R.string.home_delete_journey_message, target.journey.name))
             },
             confirmButton = {
                 TextButton(
@@ -380,10 +379,10 @@ fun HomeScreen(
                         viewModel.delete(target.journey.id)
                         deleteTarget = null
                     },
-                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.home_delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("Cancel") }
+                TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.home_cancel)) }
             },
         )
     }
@@ -392,9 +391,17 @@ fun HomeScreen(
         val n = selectedIds.size
         AlertDialog(
             onDismissRequest = { showDeleteSelected = false },
-            title = { Text(if (n == 1) "Delete journey?" else "Delete $n journeys?") },
+            title = {
+                Text(
+                    if (n == 1) {
+                        stringResource(R.string.home_delete_journey_title)
+                    } else {
+                        stringResource(R.string.home_delete_selected_title, n)
+                    },
+                )
+            },
             text = {
-                Text("The selected journeys and all their recorded steps will be deleted. This cannot be undone.")
+                Text(stringResource(R.string.home_delete_selected_message))
             },
             confirmButton = {
                 TextButton(
@@ -402,10 +409,10 @@ fun HomeScreen(
                         viewModel.deleteSelected()
                         showDeleteSelected = false
                     },
-                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.home_delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteSelected = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteSelected = false }) { Text(stringResource(R.string.home_cancel)) }
             },
         )
     }
@@ -432,19 +439,23 @@ private fun RecordingBanner(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Recording in progress",
+                    text = stringResource(R.string.home_recording_in_progress),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "${banner.targetPackage} · ${banner.stepCount} steps",
+                    text = stringResource(
+                        R.string.home_recording_banner_detail,
+                        banner.targetPackage,
+                        banner.stepCount,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             Spacer(Modifier.width(12.dp))
-            FilledTonalButton(onClick = onStop) { Text("Stop") }
+            FilledTonalButton(onClick = onStop) { Text(stringResource(R.string.home_stop)) }
         }
     }
 }
@@ -460,6 +471,7 @@ private fun JourneyRow(
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val journey = item.journey
     val isRecording = journey.endedAt == null
 
@@ -497,7 +509,7 @@ private fun JourneyRow(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = "${journey.targetAppLabel ?: journey.targetPackage} · " +
-                        relativeDate(journey.startedAt),
+                        relativeDate(context, journey.startedAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -506,7 +518,7 @@ private fun JourneyRow(
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     InfoChip(
-                        text = "${item.stepCount} steps",
+                        text = stringResource(R.string.home_step_count, item.stepCount),
                         icon = Icons.Outlined.TouchApp,
                     )
                     formatDuration(journey.startedAt, journey.endedAt, journey.pausedMs)?.let {
@@ -514,14 +526,14 @@ private fun JourneyRow(
                     }
                     if (isRecording) {
                         InfoChip(
-                            text = "recording…",
+                            text = stringResource(R.string.home_recording_chip),
                             container = MaterialTheme.colorScheme.errorContainer,
                             content = MaterialTheme.colorScheme.onErrorContainer,
                         )
                     }
                     if (journey.status == JourneyStatus.RECOVERED) {
                         InfoChip(
-                            text = "recovered",
+                            text = stringResource(R.string.home_recovered_chip),
                             container = MaterialTheme.colorScheme.tertiaryContainer,
                             content = MaterialTheme.colorScheme.onTertiaryContainer,
                         )
@@ -533,20 +545,20 @@ private fun JourneyRow(
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(
                             Icons.Filled.MoreVert,
-                            contentDescription = "More options",
+                            contentDescription = stringResource(R.string.home_more_options),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text("Rename") },
+                            text = { Text(stringResource(R.string.home_rename)) },
                             onClick = {
                                 menuOpen = false
                                 onRename()
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete") },
+                            text = { Text(stringResource(R.string.home_delete)) },
                             onClick = {
                                 menuOpen = false
                                 onDelete()
@@ -562,14 +574,14 @@ private fun JourneyRow(
 }
 
 /** "Today 14:32", "Yesterday 09:10", else "Mar 4, 14:32". */
-private fun relativeDate(epochMs: Long): String {
+private fun relativeDate(context: android.content.Context, epochMs: Long): String {
     val time = SimpleDateFormat("HH:mm", Locale.US).format(Date(epochMs))
     val day = Calendar.getInstance().apply { timeInMillis = epochMs }
     val now = Calendar.getInstance()
     fun Calendar.dayKey() = get(Calendar.YEAR) * 1000 + get(Calendar.DAY_OF_YEAR)
     return when (now.dayKey() - day.dayKey()) {
-        0 -> "Today $time"
-        1 -> "Yesterday $time"
+        0 -> context.getString(R.string.home_date_today, time)
+        1 -> context.getString(R.string.home_date_yesterday, time)
         else -> SimpleDateFormat("MMM d, HH:mm", Locale.US).format(Date(epochMs))
     }
 }
@@ -598,16 +610,14 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(20.dp))
             Text(
-                text = "Record your first journey",
+                text = stringResource(R.string.home_empty_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Capture every tap, text input and screen change while you walk " +
-                    "through a flow in another app — then export it as markdown for " +
-                    "test automation.",
+                text = stringResource(R.string.home_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -616,20 +626,20 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             OnboardingStep(
                 number = "1",
                 icon = Icons.Outlined.AppRegistration,
-                title = "Enable + pick an app",
-                subtitle = "Turn on the accessibility service, choose the app to record",
+                title = stringResource(R.string.home_step1_title),
+                subtitle = stringResource(R.string.home_step1_subtitle),
             )
             OnboardingStep(
                 number = "2",
                 icon = Icons.Outlined.TouchApp,
-                title = "Walk through the flow",
-                subtitle = "Every step is captured; tap the floating bubble to stop",
+                title = stringResource(R.string.home_step2_title),
+                subtitle = stringResource(R.string.home_step2_subtitle),
             )
             OnboardingStep(
                 number = "3",
                 icon = Icons.Outlined.Description,
-                title = "Review & export",
-                subtitle = "Redact anything sensitive, then share the markdown",
+                title = stringResource(R.string.home_step3_title),
+                subtitle = stringResource(R.string.home_step3_subtitle),
             )
         }
     }
@@ -686,12 +696,12 @@ private fun RenameDialog(
     var name by remember { mutableStateOf(currentName) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename journey") },
+        title = { Text(stringResource(R.string.home_rename_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
+                label = { Text(stringResource(R.string.home_rename_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -700,10 +710,10 @@ private fun RenameDialog(
             Button(
                 onClick = { onConfirm(name) },
                 enabled = name.isNotBlank(),
-            ) { Text("Rename") }
+            ) { Text(stringResource(R.string.home_rename)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_cancel)) }
         },
     )
 }

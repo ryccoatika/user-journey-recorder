@@ -46,21 +46,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.ryccoatika.journeyrecorder.R
 import kotlinx.coroutines.launch
 
 /** Developer inbox + the fixed English tags used in the email subject bracket. */
 internal const val DEVELOPER_EMAIL = "me@ryccoatika.com"
 
-private enum class ContactCategory(val label: String, val tag: String) {
-    SUGGESTION("Suggestion", "Suggestion"),
-    BUG("Report Bug", "Bug"),
-    REVIEW("Review", "Review"),
-    ASK("Ask", "Ask"),
-    OTHER("Other", "Other"),
+private enum class ContactCategory(@StringRes val labelRes: Int, val tag: String) {
+    SUGGESTION(R.string.contact_category_suggestion, "Suggestion"),
+    BUG(R.string.contact_category_bug, "Bug"),
+    REVIEW(R.string.contact_category_review, "Review"),
+    ASK(R.string.contact_category_ask, "Ask"),
+    OTHER(R.string.contact_category_other, "Other"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -76,6 +79,9 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
     var subject by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
+    val chooserTitle = stringResource(R.string.contact_chooser_title)
+    val noEmailAppMessage = stringResource(R.string.contact_no_email_app)
+    val emailCopiedMessage = stringResource(R.string.contact_email_copied)
     // Compose to the developer; blank subject/body = a plain "email me" tap.
     val launchEmail: (String, String) -> Unit = { fullSubject, body ->
         val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$DEVELOPER_EMAIL")).apply {
@@ -84,21 +90,22 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
         }
         // Let the user pick which email app to use rather than jumping to a default.
         try {
-            context.startActivity(Intent.createChooser(intent, "Send email with…"))
+            context.startActivity(Intent.createChooser(intent, chooserTitle))
         } catch (_: ActivityNotFoundException) {
-            scope.launch { snackbarHostState.showSnackbar("No email app found on this device.") }
+            scope.launch { snackbarHostState.showSnackbar(noEmailAppMessage) }
         }
     }
     // Subject: "[Journey Recorder][<Category>] - <subject>".
+    val subjectTemplate = stringResource(R.string.contact_email_subject, category.tag, subject.trim())
     val send: () -> Unit = {
-        launchEmail("[Journey Recorder][${category.tag}] - ${subject.trim()}", message.trim())
+        launchEmail(subjectTemplate, message.trim())
     }
     val copyEmail: () -> Unit = {
         scope.launch {
             clipboard.setClipEntry(
                 ClipEntry(ClipData.newPlainText(DEVELOPER_EMAIL, DEVELOPER_EMAIL)),
             )
-            snackbarHostState.showSnackbar("Email copied to clipboard")
+            snackbarHostState.showSnackbar(emailCopiedMessage)
         }
     }
 
@@ -106,10 +113,18 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Contact developer", fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        stringResource(R.string.settings_contact_title),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.settings_back),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -130,8 +145,7 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    "Have a suggestion, a question, or something to share? Fill in the " +
-                        "form below, or reach me directly at:",
+                    stringResource(R.string.contact_intro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -154,10 +168,10 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
                 onExpandedChange = { expanded = it },
             ) {
                 OutlinedTextField(
-                    value = category.label,
+                    value = stringResource(category.labelRes),
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Category") },
+                    label = { Text(stringResource(R.string.contact_category_label)) },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                     },
@@ -171,7 +185,7 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
                 ) {
                     ContactCategory.entries.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option.label) },
+                            text = { Text(stringResource(option.labelRes)) },
                             onClick = {
                                 category = option
                                 expanded = false
@@ -184,7 +198,7 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
             OutlinedTextField(
                 value = subject,
                 onValueChange = { subject = it },
-                label = { Text("Subject") },
+                label = { Text(stringResource(R.string.contact_subject_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
@@ -193,7 +207,7 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
             OutlinedTextField(
                 value = message,
                 onValueChange = { message = it },
-                label = { Text("Message") },
+                label = { Text(stringResource(R.string.contact_message_label)) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 minLines = 4,
                 modifier = Modifier.fillMaxWidth(),
@@ -206,7 +220,7 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                Text("Send", modifier = Modifier.padding(start = 8.dp))
+                Text(stringResource(R.string.contact_send), modifier = Modifier.padding(start = 8.dp))
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.ryccoatika.journeyrecorder.ui.onboarding
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -53,59 +54,62 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.ryccoatika.journeyrecorder.R
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.launch
 
 private enum class Accent { PRIMARY, TERTIARY }
 
+private data class OnboardingStep(
+    val icon: ImageVector,
+    @StringRes val title: Int,
+    @StringRes val subtitle: Int,
+)
+
 private data class OnboardingPage(
     val icon: ImageVector,
-    val title: String,
-    val body: String,
+    @StringRes val title: Int,
+    @StringRes val body: Int? = null,
     val accent: Accent = Accent.PRIMARY,
-    val steps: List<Triple<ImageVector, String, String>> = emptyList(),
+    val steps: List<OnboardingStep> = emptyList(),
     val privacy: Boolean = false,
 )
 
 private val pages = listOf(
     OnboardingPage(
         icon = Icons.Filled.PlayCircleOutline,
-        title = "Record journeys\nin any app",
-        body = "Capture every tap, text input and screen change while you walk " +
-            "through a flow in another app — then export the steps as markdown " +
-            "for an AI agent to turn into test automation.",
+        title = R.string.onb_page1_title,
+        body = R.string.onb_page1_body,
     ),
     OnboardingPage(
         icon = Icons.Outlined.TouchApp,
-        title = "Three simple\nsteps",
-        body = "",
+        title = R.string.onb_page2_title,
         steps = listOf(
-            Triple(
+            OnboardingStep(
                 Icons.Outlined.AppRegistration,
-                "Enable & pick an app",
-                "Turn on the accessibility service, choose the app to record",
+                R.string.onb_page2_step1_title,
+                R.string.onb_page2_step1_subtitle,
             ),
-            Triple(
+            OnboardingStep(
                 Icons.Outlined.TouchApp,
-                "Walk through the flow",
-                "A floating button records every step; tap it to pause or stop",
+                R.string.onb_page2_step2_title,
+                R.string.onb_page2_step2_subtitle,
             ),
-            Triple(
+            OnboardingStep(
                 Icons.Outlined.Description,
-                "Review & export",
-                "Redact anything sensitive, then share or save the markdown",
+                R.string.onb_page2_step3_title,
+                R.string.onb_page2_step3_subtitle,
             ),
         ),
     ),
     OnboardingPage(
         icon = Icons.Outlined.Lock,
-        title = "Your data never\nleaves this device",
-        body = "Nothing is ever sent to a server. Recordings stay on-device until " +
-            "you choose to export them. Passwords and sensitive fields are masked " +
-            "automatically and never stored.",
+        title = R.string.onb_page3_title,
+        body = R.string.onb_page3_body,
         accent = Accent.TERTIARY,
         privacy = true,
     ),
@@ -169,7 +173,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         TextButton(
                             onClick = onFinish,
                             modifier = Modifier.align(Alignment.CenterEnd),
-                        ) { Text("Skip") }
+                        ) { Text(stringResource(R.string.onb_skip)) }
                     }
                 }
 
@@ -214,7 +218,9 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         .height(56.dp),
                 ) {
                     Text(
-                        if (lastPage) "Get started" else "Next",
+                        stringResource(
+                            if (lastPage) R.string.onb_get_started else R.string.onb_next,
+                        ),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -255,16 +261,16 @@ private fun OnboardingPageContent(page: OnboardingPage, pageOffset: Float) {
             },
         ) {
             Text(
-                text = page.title,
+                text = stringResource(page.title),
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 lineHeight = MaterialTheme.typography.displaySmall.fontSize * 1.1f,
             )
-            if (page.body.isNotEmpty()) {
+            if (page.body != null) {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = page.body,
+                    text = stringResource(page.body),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -277,8 +283,13 @@ private fun OnboardingPageContent(page: OnboardingPage, pageOffset: Float) {
                     modifier = Modifier.widthIn(max = 420.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    page.steps.forEachIndexed { i, (icon, title, subtitle) ->
-                        StepRow(number = i + 1, icon = icon, title = title, subtitle = subtitle)
+                    page.steps.forEachIndexed { i, step ->
+                        StepRow(
+                            number = i + 1,
+                            icon = step.icon,
+                            title = step.title,
+                            subtitle = step.subtitle,
+                        )
                     }
                 }
             }
@@ -300,7 +311,7 @@ private fun OnboardingPageContent(page: OnboardingPage, pageOffset: Float) {
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "100% on-device · no account, no network",
+                            stringResource(R.string.onb_privacy_chip),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -369,7 +380,12 @@ private fun GlowingIcon(
 }
 
 @Composable
-private fun StepRow(number: Int, icon: ImageVector, title: String, subtitle: String) {
+private fun StepRow(
+    number: Int,
+    icon: ImageVector,
+    @StringRes title: Int,
+    @StringRes subtitle: Int,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Box(modifier = Modifier.size(46.dp), contentAlignment = Alignment.Center) {
@@ -384,12 +400,12 @@ private fun StepRow(number: Int, icon: ImageVector, title: String, subtitle: Str
         Spacer(Modifier.width(14.dp))
         Column {
             Text(
-                "$number. $title",
+                "$number. ${stringResource(title)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                subtitle,
+                stringResource(subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

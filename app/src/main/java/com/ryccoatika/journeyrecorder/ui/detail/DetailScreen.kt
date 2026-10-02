@@ -66,12 +66,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.db.EventType
 import com.ryccoatika.journeyrecorder.data.db.JourneyEntity
 import com.ryccoatika.journeyrecorder.data.db.JourneyEventEntity
@@ -134,7 +136,7 @@ fun DetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = journey?.name ?: "Journey",
+                        text = journey?.name ?: stringResource(R.string.detail_title_fallback),
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -142,15 +144,24 @@ fun DetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.detail_back),
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { showRenameDialog = true }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Rename")
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = stringResource(R.string.detail_rename),
+                        )
                     }
                     IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = stringResource(R.string.detail_delete),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -180,7 +191,8 @@ fun DetailScreen(
                         },
                         enabled = journey != null,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Share") }
+                    ) { Text(stringResource(R.string.detail_share)) }
+                    val savedToFormat = stringResource(R.string.detail_saved_to)
                     Button(
                         onClick = {
                             val j = journey ?: return@Button
@@ -188,7 +200,8 @@ fun DetailScreen(
                             scope.launch {
                                 val message =
                                     when (val result = exportManager.saveToDownloads(j, snapshot)) {
-                                        is ExportResult.Saved -> "Saved to ${result.displayPath}"
+                                        is ExportResult.Saved ->
+                                            String.format(savedToFormat, result.displayPath)
                                         is ExportResult.Failed -> result.message
                                     }
                                 snackbarHostState.showSnackbar(message)
@@ -196,7 +209,7 @@ fun DetailScreen(
                         },
                         enabled = journey != null,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Save markdown") }
+                    ) { Text(stringResource(R.string.detail_save_markdown)) }
                 }
             }
         },
@@ -240,12 +253,9 @@ fun DetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete journey?") },
+            title = { Text(stringResource(R.string.detail_delete_dialog_title)) },
             text = {
-                Text(
-                    "This journey and all its recorded steps will be deleted. " +
-                        "This cannot be undone.",
-                )
+                Text(stringResource(R.string.detail_delete_dialog_message))
             },
             confirmButton = {
                 TextButton(
@@ -253,10 +263,17 @@ fun DetailScreen(
                         showDeleteDialog = false
                         viewModel.delete(onDeleted = onBack)
                     },
-                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                ) {
+                    Text(
+                        stringResource(R.string.detail_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.detail_cancel))
+                }
             },
         )
     }
@@ -301,7 +318,10 @@ private fun HeaderCard(journey: JourneyEntity, stepCount: Int, onOpenGuide: () -
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                InfoChip(text = "$stepCount steps", icon = Icons.Outlined.TouchApp)
+                InfoChip(
+                    text = stringResource(R.string.detail_step_count, stepCount),
+                    icon = Icons.Outlined.TouchApp,
+                )
                 formatDuration(journey.startedAt, journey.endedAt, journey.pausedMs)?.let {
                     InfoChip(text = it, icon = Icons.Filled.Schedule)
                 }
@@ -333,7 +353,7 @@ private fun HeaderCard(journey: JourneyEntity, stepCount: Int, onOpenGuide: () -
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Recording ended unexpectedly — journey may be incomplete",
+                            text = stringResource(R.string.detail_recovered_warning),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -360,8 +380,7 @@ private fun HeaderCard(journey: JourneyEntity, stepCount: Int, onOpenGuide: () -
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "This app exposes no element IDs — steps use text and " +
-                                "bounds locators. Tap to learn why.",
+                            text = stringResource(R.string.detail_no_element_ids),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -387,7 +406,7 @@ private fun ScreenHeader(name: String?) {
                 shape = RoundedCornerShape(50),
             ) {
                 Text(
-                    text = name ?: "Unknown screen",
+                    text = name ?: stringResource(R.string.detail_unknown_screen),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
@@ -432,31 +451,41 @@ private fun fieldLabel(event: JourneyEventEntity): String? =
         ?: event.elementId?.takeIf { it.isNotBlank() }
         ?: event.className?.takeIf { it.isNotBlank() }
 
+@Composable
 private fun primaryLine(event: JourneyEventEntity): String = when (event.eventType) {
     EventType.SCREEN_OPEN ->
         // dialog rows reuse SCREEN_OPEN with "Dialog opened: …" in elementText
         event.elementText?.takeIf { it.isNotBlank() }
-            ?: "Open screen ${event.screenName ?: "unknown"}"
+            ?: stringResource(
+                R.string.detail_open_screen,
+                event.screenName ?: stringResource(R.string.detail_unknown),
+            )
     EventType.CLICK ->
-        elementLabel(event)?.let { "Tap \"$it\"" } ?: "Tap"
+        elementLabel(event)?.let { stringResource(R.string.detail_tap_labeled, it) }
+            ?: stringResource(R.string.detail_tap)
     EventType.LONG_CLICK ->
-        elementLabel(event)?.let { "Long-press \"$it\"" } ?: "Long-press"
+        elementLabel(event)?.let { stringResource(R.string.detail_long_press_labeled, it) }
+            ?: stringResource(R.string.detail_long_press)
     EventType.TEXT_INPUT -> {
-        val target = fieldLabel(event)?.let { " into \"$it\"" } ?: ""
+        val target = fieldLabel(event)?.let { stringResource(R.string.detail_text_target, it) } ?: ""
         when {
-            event.masked -> "Type <masked sensitive value>$target"
-            event.typedText != null -> "Type \"${event.typedText}\"$target"
-            else -> "Clear text$target"
+            event.masked -> stringResource(R.string.detail_type_masked, target)
+            event.typedText != null ->
+                stringResource(R.string.detail_type_value, event.typedText, target)
+            else -> stringResource(R.string.detail_clear_text, target)
         }
     }
     EventType.SCROLL ->
-        elementLabel(event)?.let { "Scroll \"$it\"" } ?: "Scroll"
+        elementLabel(event)?.let { stringResource(R.string.detail_scroll_labeled, it) }
+            ?: stringResource(R.string.detail_scroll)
     EventType.SELECT ->
-        elementLabel(event)?.let { "Select \"$it\"" } ?: "Select"
+        elementLabel(event)?.let { stringResource(R.string.detail_select_labeled, it) }
+            ?: stringResource(R.string.detail_select)
     EventType.SYSTEM_DIALOG ->
-        elementLabel(event)?.let { "System dialog: $it" } ?: "System dialog"
+        elementLabel(event)?.let { stringResource(R.string.detail_system_dialog_labeled, it) }
+            ?: stringResource(R.string.detail_system_dialog)
     EventType.APP_MARKER ->
-        elementLabel(event) ?: "App marker"
+        elementLabel(event) ?: stringResource(R.string.detail_app_marker)
 }
 
 @Composable
@@ -545,7 +574,7 @@ private fun EventRow(
             if (event.masked) {
                 Spacer(Modifier.height(4.dp))
                 InfoChip(
-                    text = "masked",
+                    text = stringResource(R.string.detail_masked_chip),
                     icon = Icons.Filled.VisibilityOff,
                     container = MaterialTheme.colorScheme.tertiaryContainer,
                     content = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -556,7 +585,7 @@ private fun EventRow(
             IconButton(onClick = onRedact) {
                 Icon(
                     Icons.Filled.VisibilityOff,
-                    contentDescription = "Redact typed value",
+                    contentDescription = stringResource(R.string.detail_redact),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -573,12 +602,12 @@ private fun RenameDialog(
     var name by remember { mutableStateOf(currentName) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename journey") },
+        title = { Text(stringResource(R.string.detail_rename_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
+                label = { Text(stringResource(R.string.detail_name_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -587,10 +616,10 @@ private fun RenameDialog(
             Button(
                 onClick = { onConfirm(name) },
                 enabled = name.isNotBlank(),
-            ) { Text("Rename") }
+            ) { Text(stringResource(R.string.detail_rename)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
         },
     )
 }

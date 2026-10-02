@@ -31,9 +31,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.ryccoatika.journeyrecorder.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val COLLAPSE_HYSTERESIS: Dp = 28.dp // ~3x touch slop
@@ -136,11 +138,11 @@ internal fun SelectionTopBar(
 ) {
     TopAppBar(
         title = {
-            Text("$selectedCount selected", fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.home_selected_count, selectedCount), fontWeight = FontWeight.SemiBold)
         },
         navigationIcon = {
             IconButton(onClick = onClearSelection) {
-                Icon(Icons.Filled.Close, contentDescription = "Clear selection")
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.home_clear_selection))
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -163,7 +165,7 @@ internal fun SelectionBottomBar(onDelete: () -> Unit) {
                     tint = MaterialTheme.colorScheme.error,
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.home_delete), color = MaterialTheme.colorScheme.error)
             }
         }
     }

@@ -36,9 +36,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import com.ryccoatika.journeyrecorder.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -104,7 +106,7 @@ fun SelectedAvatar(size: Dp = 44.dp, modifier: Modifier = Modifier) {
     ) {
         Icon(
             Icons.Filled.Check,
-            contentDescription = "Selected",
+            contentDescription = stringResource(R.string.common_selected),
             tint = MaterialTheme.colorScheme.onPrimary,
         )
     }

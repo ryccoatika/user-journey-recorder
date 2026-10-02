@@ -8,6 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
+import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.db.JourneyEntity
 import com.ryccoatika.journeyrecorder.data.db.JourneyEventEntity
 import java.io.File
@@ -32,9 +33,14 @@ class ExportManager(private val context: Context) {
      */
     fun share(journey: JourneyEntity, events: List<JourneyEventEntity>): ExportResult = try {
         shareInternal(journey, events)
-        ExportResult.Saved("share sheet")
+        ExportResult.Saved(context.getString(R.string.export_share_sheet_label))
     } catch (e: Exception) {
-        ExportResult.Failed("Could not share: ${e.message ?: "unknown error"}")
+        ExportResult.Failed(
+            context.getString(
+                R.string.export_share_failed,
+                e.message ?: context.getString(R.string.export_unknown_error),
+            ),
+        )
     }
 
     private fun shareInternal(journey: JourneyEntity, events: List<JourneyEventEntity>) {
@@ -59,7 +65,10 @@ class ExportManager(private val context: Context) {
             }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(sendIntent, "Share journey").apply {
+        val chooser = Intent.createChooser(
+            sendIntent,
+            context.getString(R.string.export_share_chooser_title),
+        ).apply {
             // May be called from a non-activity context (e.g. the a11y service).
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -76,7 +85,7 @@ class ExportManager(private val context: Context) {
     ): ExportResult = withContext(Dispatchers.IO) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             return@withContext ExportResult.Failed(
-                "Save to Downloads requires Android 10+ — use Share instead.",
+                context.getString(R.string.export_needs_android_10),
             )
         }
         val markdown = MarkdownGenerator.generate(journey, events)
@@ -84,7 +93,12 @@ class ExportManager(private val context: Context) {
         try {
             insertIntoDownloads(fileName, markdown)
         } catch (e: Exception) {
-            ExportResult.Failed("Failed to save to Downloads: ${e.message ?: "unknown error"}")
+            ExportResult.Failed(
+                context.getString(
+                    R.string.export_save_failed,
+                    e.message ?: context.getString(R.string.export_unknown_error),
+                ),
+            )
         }
     }
 
@@ -99,11 +113,11 @@ class ExportManager(private val context: Context) {
         }
         val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val uri = resolver.insert(collection, values)
-            ?: return ExportResult.Failed("Could not create the file in Downloads.")
+            ?: return ExportResult.Failed(context.getString(R.string.export_create_failed))
         try {
             resolver.openOutputStream(uri)?.use { stream ->
                 stream.write(markdown.toByteArray(Charsets.UTF_8))
-            } ?: throw IOException("Could not open the Downloads file for writing.")
+            } ?: throw IOException(context.getString(R.string.export_open_failed))
             val publish = ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }
             resolver.update(uri, publish, null, null)
         } catch (e: Exception) {

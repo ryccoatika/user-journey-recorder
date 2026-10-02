@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
+import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.db.Confidence
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
 import com.ryccoatika.journeyrecorder.di.Graph
@@ -125,7 +126,7 @@ class JourneyAccessibilityService : AccessibilityService() {
                     event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
                 ) {
                     leftTargetApp = false
-                    pipeline.submit(appMarker("Returned to target app"))
+                    pipeline.submit(appMarker(getString(R.string.svc_marker_returned_to_target)))
                 }
                 if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
                     screenTracker.maybeResampleOnTap(
@@ -145,7 +146,7 @@ class JourneyAccessibilityService : AccessibilityService() {
                     !isTransientSystemPackage(pkg)
                 ) {
                     leftTargetApp = true
-                    pipeline.submit(appMarker("Left target app ($pkg)"))
+                    pipeline.submit(appMarker(getString(R.string.svc_marker_left_target, pkg)))
                 }
             }
         }
@@ -200,8 +201,11 @@ class JourneyAccessibilityService : AccessibilityService() {
     private fun discardCurrent() {
         scope?.launch {
             Graph.repository.discardRecording()
-            Toast.makeText(this@JourneyAccessibilityService, "Recording discarded", Toast.LENGTH_SHORT)
-                .show()
+            Toast.makeText(
+                this@JourneyAccessibilityService,
+                getString(R.string.svc_recording_discarded),
+                Toast.LENGTH_SHORT,
+            ).show()
         }
     }
 
@@ -263,7 +267,7 @@ class JourneyAccessibilityService : AccessibilityService() {
             as? RecorderStateHolder.RecorderState.Recording ?: return
         Toast.makeText(
             this,
-            "This app exposes no element IDs - steps will use text and bounds locators",
+            getString(R.string.svc_no_element_ids),
             Toast.LENGTH_LONG,
         ).show()
         scope?.launch { Graph.journeyDao.setNoElementIds(state.journeyId, true) }

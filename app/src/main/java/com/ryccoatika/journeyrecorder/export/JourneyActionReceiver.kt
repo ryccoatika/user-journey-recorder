@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.di.Graph
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,11 +35,14 @@ class JourneyActionReceiver : BroadcastReceiver() {
                         val events = Graph.journeyDao.getEvents(journeyId)
                         when (val result = ExportManager(appContext).saveToDownloads(journey, events)) {
                             is ExportResult.Saved -> {
-                                toast(appContext, "Saved to ${result.displayPath}")
+                                toast(
+                                    appContext,
+                                    appContext.getString(R.string.notif_saved_to, result.displayPath),
+                                )
                                 JourneyNotifier.update(
                                     appContext,
                                     journeyId,
-                                    "Journey saved to Downloads",
+                                    appContext.getString(R.string.notif_saved_to_downloads),
                                     result.displayPath,
                                 )
                             }
@@ -49,7 +53,7 @@ class JourneyActionReceiver : BroadcastReceiver() {
                     ACTION_DELETE -> {
                         Graph.repository.delete(journeyId)
                         JourneyNotifier.cancel(appContext, journeyId)
-                        toast(appContext, "Journey deleted")
+                        toast(appContext, appContext.getString(R.string.notif_journey_deleted))
                     }
 
                     ACTION_STOP_RECORDING -> JourneyNotifier.stopAndShowResult(appContext)
@@ -59,7 +63,7 @@ class JourneyActionReceiver : BroadcastReceiver() {
                     ACTION_DISCARD_RECORDING -> {
                         Graph.repository.discardRecording()
                         JourneyNotifier.cancelRecording(appContext)
-                        toast(appContext, "Recording discarded")
+                        toast(appContext, appContext.getString(R.string.svc_recording_discarded))
                     }
                 }
             } finally {

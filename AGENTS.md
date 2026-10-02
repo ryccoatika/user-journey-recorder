@@ -132,8 +132,15 @@ res/xml/accessibility_service_config.xml   event types + flags (see gotchas)
 - ViewModels: plain classes with default ctor params reading `Graph` (no
   factories), except `DetailViewModel` which needs
   `viewModel { DetailViewModel(createSavedStateHandle()) }`.
-- Strings are hardcoded in Kotlin **by design** (internal tool, single
-  locale). Don't migrate to resources without being asked.
+- User-facing strings live in `res/values/strings.xml` (prefixed keys:
+  `home_`, `settings_`, `detail_`, `setup_`, `onb_`, `guide_`, `notif_`,
+  `svc_`, `export_`, `contact_`, `common_`). Composables use
+  `stringResource(R.string.…)`; non-Compose (service, bubble, notifier,
+  receiver, ExportManager) use `context.getString(…)`. Add new UI text as a
+  resource — don't hardcode. Single locale still (no translations), and
+  glyph/emoji symbols in the bubble (✕ ■ 🗑 …) and markdown tokens stay
+  inline. The `ContactCategory.tag` email bracket values stay hardcoded
+  English (used in the subject line).
 - Step numbers shown to users are 1-based (`sequence + 1`) to match markdown.
 
 ## Commits
