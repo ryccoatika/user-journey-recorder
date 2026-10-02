@@ -129,10 +129,12 @@ fun HomeScreen(
         if (queryInput != vmQuery) viewModel.setQuery(queryInput)
     }
 
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val scrollSignals = rememberHomeScrollSignals(
         listState = listState,
         queryEmpty = queryInput.isEmpty(),
         searchFieldFocused = searchFieldFocused,
+        onUserScroll = { focusManager.clearFocus() },
     )
 
     var renameTarget by remember { mutableStateOf<JourneyListItem?>(null) }

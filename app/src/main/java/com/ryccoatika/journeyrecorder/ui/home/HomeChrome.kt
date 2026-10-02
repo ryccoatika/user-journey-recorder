@@ -49,6 +49,7 @@ internal class HomeScrollSignals(
     private val hysteresisPx: Float,
     private val queryEmpty: () -> Boolean,
     private val searchFieldFocused: () -> Boolean,
+    private val onUserScroll: () -> Unit,
 ) {
     var fabVisible by mutableStateOf(true)
     var searchFieldExpanded by mutableStateOf(true)
@@ -67,6 +68,7 @@ internal class HomeScrollSignals(
 
         private fun onScroll(deltaY: Float) {
             if (deltaY == 0f) return
+            if (searchFieldFocused()) onUserScroll()
             val sameDirection =
                 (deltaY < 0f && accumulated <= 0f) || (deltaY > 0f && accumulated >= 0f)
             accumulated = if (sameDirection) accumulated + deltaY else deltaY
@@ -91,15 +93,18 @@ internal fun rememberHomeScrollSignals(
     listState: LazyListState,
     queryEmpty: Boolean,
     searchFieldFocused: Boolean,
+    onUserScroll: () -> Unit,
 ): HomeScrollSignals {
     val queryEmptyState = rememberUpdatedState(queryEmpty)
     val focusedState = rememberUpdatedState(searchFieldFocused)
+    val onScrollState = rememberUpdatedState(onUserScroll)
     val hysteresisPx = with(LocalDensity.current) { COLLAPSE_HYSTERESIS.toPx() }
     val signals = remember {
         HomeScrollSignals(
             hysteresisPx = hysteresisPx,
             queryEmpty = { queryEmptyState.value },
             searchFieldFocused = { focusedState.value },
+            onUserScroll = { onScrollState.value() },
         )
     }
     LaunchedEffect(listState) {
@@ -152,7 +157,11 @@ internal fun SelectionBottomBar(onDelete: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
             Spacer(Modifier.width(4.dp))
             TextButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = null)
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
                 Spacer(Modifier.width(8.dp))
                 Text("Delete", color = MaterialTheme.colorScheme.error)
             }
