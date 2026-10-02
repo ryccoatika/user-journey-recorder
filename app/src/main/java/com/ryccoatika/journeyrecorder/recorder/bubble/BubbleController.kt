@@ -317,7 +317,7 @@ class BubbleController(
         val orbCy = orbTop + orbSize / 2
 
         // Main button (tap to collapse) sits exactly over the hidden orb.
-        val main = circleButton(if (recording != null) "‖" else "✕", SURFACE) { collapse() }
+        val main = circleButton("✕", SURFACE) { collapse() }
         addAt(container, main, orbCx, orbCy, orbSize)
         mainButtonView = main
         // Grow in place from the orb.
