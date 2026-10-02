@@ -42,6 +42,9 @@ object GuideRoute
 @Serializable
 object ContactDeveloperRoute
 
+@Serializable
+object OnboardingRoute
+
 // Material 3 emphasized easing pair — natural settle on enter, quick launch on exit.
 private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
@@ -144,6 +147,7 @@ private fun AppNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenGuide = { navController.navigate(GuideRoute) },
                 onOpenContactDeveloper = { navController.navigate(ContactDeveloperRoute) },
+                onOpenOnboarding = { navController.navigate(OnboardingRoute) },
             )
         }
         composable<GuideRoute> {
@@ -151,6 +155,9 @@ private fun AppNavHost(
         }
         composable<ContactDeveloperRoute> {
             ContactDeveloperScreen(onBack = { navController.popBackStack() })
+        }
+        composable<OnboardingRoute> {
+            OnboardingScreen(onFinish = { navController.popBackStack() })
         }
     }
 }

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.StarRate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,6 +74,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenGuide: () -> Unit,
     onOpenContactDeveloper: () -> Unit,
+    onOpenOnboarding: () -> Unit,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -154,6 +156,13 @@ fun SettingsScreen(
                     title = "Theme",
                     subtitle = themeModeLabel(themeMode),
                     onClick = { showThemeDialog = true },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Filled.PlayCircleOutline,
+                    title = "How it works",
+                    subtitle = "Replay the intro — what it does and on-device privacy",
+                    onClick = onOpenOnboarding,
                 )
                 RowDivider()
                 SettingsRow(
