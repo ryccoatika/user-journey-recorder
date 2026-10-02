@@ -67,7 +67,10 @@ fun AppNav(
     when (onboardingSeen) {
         null -> Unit
         false -> OnboardingScreen(
-            onFinish = { scope.launch { Graph.appPrefs.setOnboardingSeen() } },
+            onFinish = {
+                Graph.analytics.onboardingCompleted()
+                scope.launch { Graph.appPrefs.setOnboardingSeen() }
+            },
         )
         true -> AppNavHost(deepLink = deepLink, onDeepLinkHandled = onDeepLinkHandled)
     }
@@ -79,6 +82,16 @@ private fun AppNavHost(
     onDeepLinkHandled: () -> Unit,
 ) {
     val navController = rememberNavController()
+
+    // One screen_view per destination the user lands on. Route is the
+    // serialized type name (e.g. "…ui.HomeRoute") — take the simple name only.
+    androidx.compose.runtime.LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { entry ->
+            entry.destination.route?.substringAfterLast('.')?.let { route ->
+                Graph.analytics.logScreenView(route)
+            }
+        }
+    }
 
     // Deep links from the bubble / notification.
     androidx.compose.runtime.LaunchedEffect(deepLink) {

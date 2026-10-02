@@ -31,6 +31,7 @@ class DetailViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun redact(eventId: Long) {
+        Graph.analytics.redactionUsed()
         viewModelScope.launch { dao.redactEvent(eventId) }
     }
 

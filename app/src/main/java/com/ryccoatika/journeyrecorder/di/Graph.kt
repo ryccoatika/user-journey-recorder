@@ -2,6 +2,7 @@ package com.ryccoatika.journeyrecorder.di
 
 import android.content.Context
 import androidx.room.Room
+import com.ryccoatika.journeyrecorder.analytics.AppAnalytics
 import com.ryccoatika.journeyrecorder.data.AppPrefs
 import com.ryccoatika.journeyrecorder.data.JourneyRepository
 import com.ryccoatika.journeyrecorder.data.db.AppDatabase
@@ -20,10 +21,13 @@ object Graph {
     val stepPipeline: StepPipeline by lazy { StepPipeline(journeyDao) }
 
     val repository: JourneyRepository by lazy {
-        JourneyRepository(journeyDao, recorderState, stepPipeline)
+        JourneyRepository(journeyDao, recorderState, stepPipeline, analytics)
     }
 
     lateinit var appPrefs: AppPrefs
+        private set
+
+    lateinit var analytics: AppAnalytics
         private set
 
     fun init(context: Context) {
@@ -32,5 +36,6 @@ object Graph {
             .addMigrations(AppDatabase.MIGRATION_1_2)
             .build()
         appPrefs = AppPrefs(appContext)
+        analytics = AppAnalytics(appContext)
     }
 }

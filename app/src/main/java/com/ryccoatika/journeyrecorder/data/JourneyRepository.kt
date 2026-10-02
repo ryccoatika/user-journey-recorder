@@ -1,5 +1,6 @@
 package com.ryccoatika.journeyrecorder.data
 
+import com.ryccoatika.journeyrecorder.analytics.AppAnalytics
 import com.ryccoatika.journeyrecorder.data.db.JourneyDao
 import com.ryccoatika.journeyrecorder.data.db.JourneyEntity
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
@@ -24,6 +25,7 @@ class JourneyRepository(
     private val dao: JourneyDao,
     private val stateHolder: RecorderStateHolder,
     private val pipeline: RecordingPipeline,
+    private val analytics: AppAnalytics? = null,
 ) {
     suspend fun startRecording(
         targetPackage: String,
@@ -54,6 +56,7 @@ class JourneyRepository(
         )
         pipeline.begin(journeyId)
         stateHolder.setRecording(journeyId, targetPackage)
+        analytics?.recordingStarted()
         return journeyId
     }
 
@@ -67,6 +70,7 @@ class JourneyRepository(
         val state = stateHolder.current as? RecorderStateHolder.RecorderState.Recording ?: return
         pipeline.flushAndEnd()
         dao.finish(state.journeyId, System.currentTimeMillis(), status, stateHolder.totalPausedMs())
+        analytics?.recordingStopped(status.name.lowercase(Locale.US), dao.countEvents(state.journeyId))
         stateHolder.setIdle()
     }
 
@@ -79,6 +83,7 @@ class JourneyRepository(
         val state = stateHolder.current as? RecorderStateHolder.RecorderState.Recording ?: return
         pipeline.flushAndEnd()
         dao.deleteJourney(state.journeyId)
+        analytics?.recordingDiscarded()
         stateHolder.setIdle()
     }
 

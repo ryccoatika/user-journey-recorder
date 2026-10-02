@@ -9,6 +9,8 @@ import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import com.ryccoatika.journeyrecorder.R
+import com.ryccoatika.journeyrecorder.analytics.AppAnalytics
+import com.ryccoatika.journeyrecorder.di.Graph
 import com.ryccoatika.journeyrecorder.data.db.JourneyEntity
 import com.ryccoatika.journeyrecorder.data.db.JourneyEventEntity
 import java.io.File
@@ -33,6 +35,7 @@ class ExportManager(private val context: Context) {
      */
     fun share(journey: JourneyEntity, events: List<JourneyEventEntity>): ExportResult = try {
         shareInternal(journey, events)
+        Graph.analytics.journeyExported(AppAnalytics.METHOD_SHARE)
         ExportResult.Saved(context.getString(R.string.export_share_sheet_label))
     } catch (e: Exception) {
         ExportResult.Failed(
@@ -91,7 +94,11 @@ class ExportManager(private val context: Context) {
         val markdown = MarkdownGenerator.generate(journey, events)
         val fileName = buildFileName(journey)
         try {
-            insertIntoDownloads(fileName, markdown)
+            insertIntoDownloads(fileName, markdown).also { result ->
+                if (result is ExportResult.Saved) {
+                    Graph.analytics.journeyExported(AppAnalytics.METHOD_DOWNLOAD)
+                }
+            }
         } catch (e: Exception) {
             ExportResult.Failed(
                 context.getString(

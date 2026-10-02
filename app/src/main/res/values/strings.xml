@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Journey Recorder</string>
     <string name="a11y_service_label">Journey Recorder</string>
-    <string name="a11y_service_description">Records taps, screen changes and text input in the app you choose, so SQA can export the flow as a markdown step list. Nothing is captured unless you explicitly start a recording, and all data stays on this device until you export it.</string>
+    <string name="a11y_service_description">Records taps, screen changes and text input in the app you choose, so SQA can export the flow as a markdown step list. Nothing is captured unless you explicitly start a recording, and your recorded journeys stay on this device until you export them. Only anonymous crash and usage diagnostics are sent.</string>
 
     <!-- Home -->
     <string name="home_title">Journey Recorder</string>
@@ -80,9 +80,9 @@
     <string name="onb_page2_step2_subtitle">A floating button records every step; tap it to pause or stop</string>
     <string name="onb_page2_step3_title">Review &amp; export</string>
     <string name="onb_page2_step3_subtitle">Redact anything sensitive, then share or save the markdown</string>
-    <string name="onb_page3_title">Your data never\nleaves this device</string>
-    <string name="onb_page3_body">Nothing is ever sent to a server. Recordings stay on-device until you choose to export them. Passwords and sensitive fields are masked automatically and never stored.</string>
-    <string name="onb_privacy_chip" formatted="false">100% on-device · no account, no network</string>
+    <string name="onb_page3_title">Your recordings never\nleave this device</string>
+    <string name="onb_page3_body">Your recorded journeys stay on this device until you choose to export them. Passwords and sensitive fields are masked automatically and never stored. Only anonymous crash and usage diagnostics are sent, to help improve the app.</string>
+    <string name="onb_privacy_chip">Recordings on-device · no account</string>
     <string name="onb_skip">Skip</string>
     <string name="onb_next">Next</string>
     <string name="onb_get_started">Get started</string>
@@ -137,7 +137,7 @@
     <string name="settings_no_play_store">No Play Store or browser available</string>
     <string name="settings_cancel">Cancel</string>
     <string name="settings_about_app_name">Journey Recorder</string>
-    <string name="settings_about_body">Internal SQA tool that records user journeys in other apps and exports them as markdown for test automation. Journeys stay on this device until you export them; passwords and sensitive fields are masked at capture.</string>
+    <string name="settings_about_body">Internal SQA tool that records user journeys in other apps and exports them as markdown for test automation. Journeys stay on this device until you export them; passwords and sensitive fields are masked at capture. Anonymous crash and usage diagnostics are sent to help improve the app.</string>
     <string name="settings_about_copyright">© Rycco Atika</string>
     <string name="settings_about_close">Close</string>
     <string name="settings_theme_system">Follow system</string>
