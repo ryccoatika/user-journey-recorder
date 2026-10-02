@@ -17,8 +17,8 @@
 # Decrypts the committed .gpg secrets back into their plaintext originals. Run
 # from the repo root (locally or in CI):
 #   ENCRYPT_KEY=<passphrase> ./release/decrypt-secrets.sh
-# The build reads release/app-release.jks (signing) and release/google-services.json
-# (copied into app/ by app/build.gradle.kts).
+# The build reads release/app-release.jks (signing) and app/google-services.json
+# (the google-services plugin scans app/ directly — no build-time copy).
 
 decrypt() {
   PASSPHRASE=$1
@@ -31,7 +31,7 @@ if [[ ! -z "$ENCRYPT_KEY" ]]; then
   # Decrypt Release keystore
   decrypt ${ENCRYPT_KEY} release/app-release.gpg release/app-release.jks
   # Decrypt Google Services key (Android)
-  decrypt ${ENCRYPT_KEY} release/google-services.gpg release/google-services.json
+  decrypt ${ENCRYPT_KEY} release/google-services.gpg app/google-services.json
   # Decrypt Play Store service-account key (used by fastlane to publish)
   decrypt ${ENCRYPT_KEY} release/play-account.gpg release/play-account.json
 else

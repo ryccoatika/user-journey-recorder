@@ -5,13 +5,9 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// Firebase is mandatory (google-services + crashlytics + analytics). The json
-// lives in the gitignored release/ folder next to the keystores; run
-// ENCRYPT_KEY=<passphrase> ./release/decrypt-secrets.sh to produce it. The
-// google-services plugin only scans app/, so bridge the file into place first,
-// then always apply the plugins.
-rootProject.file("release/google-services.json")
-    .copyTo(file("google-services.json"), overwrite = true)
+// Firebase is mandatory (google-services + crashlytics + analytics).
+// app/google-services.json is gitignored; produce it with
+// ENCRYPT_KEY=<passphrase> ./release/decrypt-secrets.sh before building.
 apply(plugin = "com.google.gms.google-services")
 apply(plugin = "com.google.firebase.crashlytics")
 
