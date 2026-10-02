@@ -86,7 +86,6 @@ object JourneyNotifier {
             .setOnlyAlertOnce(true)
             .setColor(0xFFD32F2F.toInt())
             .setColorized(true)
-            .setProgress(0, 0, !paused) // indeterminate bar signals "live"
             .addAction(
                 0,
                 "Stop",
