@@ -50,6 +50,9 @@ interface JourneyDao {
     @Query("SELECT COUNT(*) FROM journey_events WHERE journeyId = :journeyId")
     fun observeEventCount(journeyId: Long): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM journey_events WHERE journeyId = :journeyId")
+    suspend fun countEvents(journeyId: Long): Int
+
     @Query("SELECT journeyId, COUNT(*) AS cnt FROM journey_events GROUP BY journeyId")
     fun observeEventCounts(): Flow<List<JourneyCount>>
 

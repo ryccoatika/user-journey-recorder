@@ -45,6 +45,7 @@ class StepPipelineTest {
         override fun observeEventCount(journeyId: Long): Flow<Int> = emptyFlow()
         override fun observeEventCounts(): Flow<List<JourneyCount>> = emptyFlow()
         override suspend fun getLastEventTime(journeyId: Long): Long? = null
+        override suspend fun countEvents(journeyId: Long): Int = events.size
         override suspend fun redactEvent(eventId: Long) = Unit
     }
 

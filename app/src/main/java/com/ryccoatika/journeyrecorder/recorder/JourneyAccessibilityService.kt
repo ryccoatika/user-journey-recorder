@@ -8,33 +8,30 @@ import android.widget.Toast
 import com.ryccoatika.journeyrecorder.data.db.Confidence
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
 import com.ryccoatika.journeyrecorder.di.Graph
-import com.ryccoatika.journeyrecorder.export.ExportManager
-import com.ryccoatika.journeyrecorder.export.ExportResult
 import com.ryccoatika.journeyrecorder.export.JourneyNotifier
 import com.ryccoatika.journeyrecorder.recorder.bubble.BubbleController
-import com.ryccoatika.journeyrecorder.recorder.bubble.ResultCardController
 import com.ryccoatika.journeyrecorder.ui.MainActivity
 import com.ryccoatika.journeyrecorder.util.DeviceInfoProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Capture engine + XRecorder-style always-on launcher host. Gates events into
- * the [StepPipeline], and owns the [BubbleController], the result card, and the
- * persistent controls notification. WindowManager work stays on a
- * Main.immediate scope.
+ * the [StepPipeline], and owns the [BubbleController] and the live recording
+ * notification. WindowManager work stays on a Main.immediate scope.
  */
 class JourneyAccessibilityService : AccessibilityService() {
 
     private var scope: CoroutineScope? = null
     private var bubble: BubbleController? = null
-    private var resultCard: ResultCardController? = null
+    private var notifJob: Job? = null
     private lateinit var screenTracker: ScreenTracker
     private lateinit var interpreter: EventInterpreter
     private var leftTargetApp = false
@@ -61,13 +58,12 @@ class JourneyAccessibilityService : AccessibilityService() {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         this.scope = scope
 
-        resultCard = ResultCardController(this)
         bubble = BubbleController(
             service = this,
             stateHolder = Graph.recorderState,
             dao = Graph.journeyDao,
             onRecord = { startRecordingForeground() },
-            onStop = { scope.launch { finishAndPresentResult() } },
+            onStop = { scope.launch { JourneyNotifier.stopAndShowResult(this@JourneyAccessibilityService) } },
             onDiscard = { discardCurrent() },
             onTogglePause = { Graph.repository.togglePause() },
             onHome = { goHome() },
@@ -77,12 +73,16 @@ class JourneyAccessibilityService : AccessibilityService() {
 
         scope.launch { Graph.repository.recoverOrphans() }
 
-        // Recording lifecycle: arm the screen tracker when a recording starts.
+        // Recording lifecycle: arm the screen tracker + live notification on
+        // start, tear the notification down on stop.
         scope.launch {
             Graph.recorderState.state.collect { state ->
                 if (state is RecorderStateHolder.RecorderState.Recording) {
                     leftTargetApp = false
                     screenTracker.startRecording()
+                    startRecordingNotification(state.journeyId)
+                } else {
+                    stopRecordingNotification()
                 }
             }
         }
@@ -217,66 +217,32 @@ class JourneyAccessibilityService : AccessibilityService() {
         )
     }
 
-    // --------------------------------------------------------------- result flow
+    // ------------------------------------------------------ live recording notif
 
-    /** Stop -> save -> surface the result (floating card + notification). */
-    private suspend fun finishAndPresentResult() {
-        val recording = Graph.recorderState.current
-            as? RecorderStateHolder.RecorderState.Recording ?: return
-        Graph.repository.finishRecording()
-
-        val journey = Graph.journeyDao.getJourney(recording.journeyId) ?: return
-        val events = Graph.journeyDao.getEvents(recording.journeyId)
-        val duration = ((journey.endedAt ?: journey.startedAt) - journey.startedAt) / 1000
-        val subtitle = "${events.size} steps · ${duration}s · " +
-            (journey.targetAppLabel ?: journey.targetPackage)
-
-        resultCard?.show(
-            title = journey.name,
-            subtitle = subtitle,
-            actions = ResultCardController.Actions(
-                onOpen = { openJourney(journey.id) },
-                onShare = {
-                    JourneyNotifier.buildShareChooser(this, journey, events)?.let(::startActivity)
-                },
-                onSave = {
-                    scope?.launch {
-                        val result = withContext(Dispatchers.IO) {
-                            ExportManager(this@JourneyAccessibilityService)
-                                .saveToDownloads(journey, events)
-                        }
-                        val message = when (result) {
-                            is ExportResult.Saved -> "Saved to ${result.displayPath}"
-                            is ExportResult.Failed -> result.message
-                        }
-                        Toast.makeText(this@JourneyAccessibilityService, message, Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                },
-                onDelete = {
-                    scope?.launch {
-                        Graph.repository.delete(journey.id)
-                        JourneyNotifier.cancel(this@JourneyAccessibilityService, journey.id)
-                        Toast.makeText(
-                            this@JourneyAccessibilityService,
-                            "Journey deleted",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                },
-            ),
-        )
-
-        JourneyNotifier.showResult(this, journey, events)
+    private fun startRecordingNotification(journeyId: Long) {
+        notifJob?.cancel()
+        notifJob = scope?.launch {
+            val journey = Graph.journeyDao.getJourney(journeyId) ?: return@launch
+            while (true) {
+                val count = Graph.journeyDao.countEvents(journeyId)
+                val elapsed = ((System.currentTimeMillis() - journey.startedAt) / 1000)
+                    .coerceAtLeast(0)
+                JourneyNotifier.showRecording(
+                    this@JourneyAccessibilityService,
+                    journey,
+                    count,
+                    elapsed,
+                    Graph.recorderState.isPaused,
+                )
+                delay(1000)
+            }
+        }
     }
 
-    private fun openJourney(journeyId: Long) {
-        startActivity(
-            Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                putExtra(JourneyNotifier.EXTRA_OPEN_JOURNEY_ID, journeyId)
-            },
-        )
+    private fun stopRecordingNotification() {
+        notifJob?.cancel()
+        notifJob = null
+        JourneyNotifier.cancelRecording(this)
     }
 
     // ------------------------------------------------------------------ helpers
@@ -323,10 +289,11 @@ class JourneyAccessibilityService : AccessibilityService() {
                 Graph.repository.finishRecording(JourneyStatus.RECOVERED)
             }
         }
+        notifJob?.cancel()
+        notifJob = null
+        JourneyNotifier.cancelRecording(this)
         bubble?.dispose()
         bubble = null
-        resultCard?.dispose()
-        resultCard = null
         scope?.cancel()
         scope = null
     }

@@ -51,6 +51,16 @@ class JourneyActionReceiver : BroadcastReceiver() {
                         JourneyNotifier.cancel(appContext, journeyId)
                         toast(appContext, "Journey deleted")
                     }
+
+                    ACTION_STOP_RECORDING -> JourneyNotifier.stopAndShowResult(appContext)
+
+                    ACTION_PAUSE_RECORDING -> Graph.repository.togglePause()
+
+                    ACTION_DISCARD_RECORDING -> {
+                        Graph.repository.discardRecording()
+                        JourneyNotifier.cancelRecording(appContext)
+                        toast(appContext, "Recording discarded")
+                    }
                 }
             } finally {
                 pending.finish()
@@ -67,6 +77,10 @@ class JourneyActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_SAVE = "com.ryccoatika.journeyrecorder.action.SAVE_JOURNEY"
         const val ACTION_DELETE = "com.ryccoatika.journeyrecorder.action.DELETE_JOURNEY"
+        const val ACTION_STOP_RECORDING = "com.ryccoatika.journeyrecorder.action.STOP_RECORDING"
+        const val ACTION_PAUSE_RECORDING = "com.ryccoatika.journeyrecorder.action.PAUSE_RECORDING"
+        const val ACTION_DISCARD_RECORDING =
+            "com.ryccoatika.journeyrecorder.action.DISCARD_RECORDING"
         const val EXTRA_JOURNEY_ID = "journey_id"
     }
 }
