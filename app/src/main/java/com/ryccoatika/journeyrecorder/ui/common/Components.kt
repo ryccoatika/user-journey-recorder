@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -88,6 +90,56 @@ fun TargetAppIcon(
             )
         }
     }
+}
+
+/** Selected-state leading avatar: primary circle with a check (multi-select). */
+@Composable
+fun SelectedAvatar(size: Dp = 44.dp, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Filled.Check,
+            contentDescription = "Selected",
+            tint = MaterialTheme.colorScheme.onPrimary,
+        )
+    }
+}
+
+/** Pill search field (TextField, surfaceVariant, transparent indicators). */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun SearchField(
+    query: String,
+    placeholder: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    androidx.compose.material3.TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier,
+        placeholder = { Text(placeholder) },
+        singleLine = true,
+        shape = CircleShape,
+        leadingIcon = {
+            Icon(Icons.Filled.Search, contentDescription = null)
+        },
+        trailingIcon = trailing,
+        colors = androidx.compose.material3.TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+        ),
+    )
 }
 
 /** Soft-pulsing red dot — the universal "recording" signal in the app. */
