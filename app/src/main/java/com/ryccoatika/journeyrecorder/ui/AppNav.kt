@@ -56,6 +56,8 @@ fun AppNav(
             deepLink.journeyId != null -> navController.navigate(DetailRoute(deepLink.journeyId))
             deepLink.openSetup -> navController.navigate(SetupRoute)
             deepLink.openSettings -> navController.navigate(SettingsRoute)
+            deepLink.openHome ->
+                navController.popBackStack(HomeRoute, inclusive = false)
             else -> return@LaunchedEffect
         }
         onDeepLinkHandled()

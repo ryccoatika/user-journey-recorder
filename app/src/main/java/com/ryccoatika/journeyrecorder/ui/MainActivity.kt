@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
         journeyId = getLongExtra(JourneyNotifier.EXTRA_OPEN_JOURNEY_ID, -1L).takeIf { it > 0 },
         openSetup = getBooleanExtra(JourneyAccessibilityService.EXTRA_OPEN_SETUP, false),
         openSettings = getBooleanExtra(JourneyAccessibilityService.EXTRA_OPEN_SETTINGS, false),
+        openHome = getBooleanExtra(JourneyAccessibilityService.EXTRA_OPEN_HOME, false),
     )
 }
 
@@ -59,4 +60,5 @@ data class DeepLink(
     val journeyId: Long? = null,
     val openSetup: Boolean = false,
     val openSettings: Boolean = false,
+    val openHome: Boolean = false,
 )

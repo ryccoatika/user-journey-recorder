@@ -205,14 +205,8 @@ class JourneyAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun goHome() {
-        startActivity(
-            Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            },
-        )
-    }
+    /** Open the app's own home (journey list), not the Android launcher. */
+    private fun goHome() = openInApp(EXTRA_OPEN_HOME)
 
     private fun openInApp(extra: String) {
         startActivity(
@@ -340,6 +334,7 @@ class JourneyAccessibilityService : AccessibilityService() {
     companion object {
         const val EXTRA_OPEN_SETUP = "open_setup"
         const val EXTRA_OPEN_SETTINGS = "open_settings"
+        const val EXTRA_OPEN_HOME = "open_home"
 
         private const val OWN_PACKAGE = "com.ryccoatika.journeyrecorder"
 
