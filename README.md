@@ -115,3 +115,7 @@ Documented in-app; not bugs:
 - Compose / Flutter / RN targets expose no view ids — steps fall back to
   text/content-description/bounds locators (flagged in the export).
 - Split-screen is unsupported.
+
+## License
+
+Released under the [MIT License](LICENSE) — © 2026 Rycco Atika.
