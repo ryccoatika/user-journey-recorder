@@ -7,15 +7,21 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.ryccoatika.journeyrecorder.di.Graph
 import com.ryccoatika.journeyrecorder.ui.detail.DetailScreen
 import com.ryccoatika.journeyrecorder.ui.guide.GuideScreen
 import com.ryccoatika.journeyrecorder.ui.home.HomeScreen
+import com.ryccoatika.journeyrecorder.ui.onboarding.OnboardingScreen
 import com.ryccoatika.journeyrecorder.ui.settings.ContactDeveloperScreen
 import com.ryccoatika.journeyrecorder.ui.settings.SettingsScreen
 import com.ryccoatika.journeyrecorder.ui.setup.SetupScreen
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -47,6 +53,27 @@ private const val EXIT_MS = 250
 fun AppNav(
     deepLink: DeepLink = DeepLink(),
     onDeepLinkHandled: () -> Unit = {},
+) {
+    // First-launch onboarding gate. null = pref not read yet (keep the current
+    // frame; DataStore resolves within a frame or two).
+    val onboardingSeen by Graph.appPrefs
+        .observeOnboardingSeen()
+        .collectAsStateWithLifecycle(initialValue = null)
+    val scope = rememberCoroutineScope()
+
+    when (onboardingSeen) {
+        null -> Unit
+        false -> OnboardingScreen(
+            onFinish = { scope.launch { Graph.appPrefs.setOnboardingSeen() } },
+        )
+        true -> AppNavHost(deepLink = deepLink, onDeepLinkHandled = onDeepLinkHandled)
+    }
+}
+
+@Composable
+private fun AppNavHost(
+    deepLink: DeepLink,
+    onDeepLinkHandled: () -> Unit,
 ) {
     val navController = rememberNavController()
 

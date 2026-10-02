@@ -48,8 +48,22 @@ class AppPrefs(private val context: Context) {
         }
     }
 
+    /** False until the user finishes the first-launch onboarding. */
+    fun observeOnboardingSeen(): Flow<Boolean> =
+        context.appPrefsDataStore.data
+            .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+            .map { it[ONBOARDING_SEEN] ?: false }
+
+    suspend fun setOnboardingSeen() {
+        try {
+            context.appPrefsDataStore.edit { prefs -> prefs[ONBOARDING_SEEN] = true }
+        } catch (_: IOException) {
+        }
+    }
+
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val BUBBLE_ENABLED = booleanPreferencesKey("bubble_enabled")
+        val ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
     }
 }
