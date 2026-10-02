@@ -14,4 +14,8 @@
 .cxx
 local.properties
 
+# Secrets — only the encrypted release/*.gpg blobs are committed.
+# Plaintext originals are produced locally/CI by release/decrypt-secrets.sh.
 app/google-services.json
+release/app-release.jks
+release/*.json
