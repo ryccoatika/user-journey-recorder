@@ -31,13 +31,18 @@ A native Android SQA tool that records user journeys in **other** apps — taps,
 ## Screenshots
 
 <p align="center">
-  <img src="art/screenshots/phone/01-onboarding.png" alt="Onboarding: how it works and on-device privacy" width="200">
-  <img src="art/screenshots/phone/02-home.png" alt="Journey list with search and multi-select" width="200">
-  <img src="art/screenshots/phone/03-recording.png" alt="Recording in progress with the floating control bubble" width="200">
-  <img src="art/screenshots/phone/04-detail.png" alt="Step-by-step review with per-value redaction and export" width="200">
+  <img src="art/screenshots/phone/01-onboarding.png" alt="Onboarding: record journeys in any app" width="200">
+  <img src="art/screenshots/phone/02-onboarding.png" alt="Onboarding: three simple steps" width="200">
+  <img src="art/screenshots/phone/03-onboarding.png" alt="Onboarding: your recordings never leave this device" width="200">
 </p>
 
-<p align="center"><em>Onboarding · Journey list · Recording bubble · Review &amp; export</em></p>
+<p align="center">
+  <img src="art/screenshots/phone/04-home.png" alt="Journey list with search" width="200">
+  <img src="art/screenshots/phone/05-new-recording.png" alt="New recording: pick the app to record" width="200">
+  <img src="art/screenshots/phone/06-detail.png" alt="Step-by-step review with per-value redaction and export" width="200">
+</p>
+
+<p align="center"><em>Onboarding — record anything · three steps · on-device privacy<br>Journey list · Pick an app · Review &amp; export</em></p>
 
 ## Features
 
