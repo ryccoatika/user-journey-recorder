@@ -74,7 +74,7 @@ Key decisions:
 - **Masking before persistence** (`SensitiveTextGuard`: password flags, name regex, Luhn; fail closed on unknown fields). Pure and unit-tested.
 - Pure logic (`MarkdownGenerator`, `SensitiveTextGuard`, `StepPipeline`) is JVM-unit-tested; the pipeline value types carry no `android.*` imports so the suite runs on the JVM.
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full contract (layers, dependency rules, invariants) and [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full contract (layers, dependency rules, invariants).
 
 ## Package map
 
