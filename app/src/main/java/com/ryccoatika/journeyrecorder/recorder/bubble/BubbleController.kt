@@ -267,7 +267,7 @@ class BubbleController(
         timerJob = uiScope?.launch {
             val startedAt = dao.getJourney(journeyId)?.startedAt ?: System.currentTimeMillis()
             while (true) {
-                val elapsed = ((System.currentTimeMillis() - startedAt) / 1000).coerceAtLeast(0)
+                val elapsed = stateHolder.recordedElapsedMs(startedAt) / 1000
                 timer.text = "%d:%02d".format(elapsed / 60, elapsed % 60)
                 delay(1000)
             }

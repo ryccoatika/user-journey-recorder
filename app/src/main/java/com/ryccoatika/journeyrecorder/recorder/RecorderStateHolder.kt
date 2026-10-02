@@ -24,18 +24,44 @@ class RecorderStateHolder {
     private val _paused = MutableStateFlow(false)
     val paused: StateFlow<Boolean> = _paused.asStateFlow()
 
+    // Paused-time accounting so the elapsed timer freezes while paused.
+    private var pausedAtMs = 0L
+    private var accumulatedPausedMs = 0L
+
     internal fun setRecording(journeyId: Long, targetPackage: String) {
         _paused.value = false
+        pausedAtMs = 0L
+        accumulatedPausedMs = 0L
         _state.value = RecorderState.Recording(journeyId, targetPackage)
     }
 
     internal fun setIdle() {
         _paused.value = false
+        pausedAtMs = 0L
+        accumulatedPausedMs = 0L
         _state.value = RecorderState.Idle
     }
 
     internal fun setPaused(paused: Boolean) {
+        if (paused == _paused.value) return
+        val now = System.currentTimeMillis()
+        if (paused) {
+            pausedAtMs = now
+        } else if (pausedAtMs != 0L) {
+            accumulatedPausedMs += now - pausedAtMs
+            pausedAtMs = 0L
+        }
         _paused.value = paused
+    }
+
+    /**
+     * Elapsed recording time excluding paused spans. Freezes while paused, so
+     * the bubble/notification timer stops counting on pause.
+     */
+    fun recordedElapsedMs(startedAt: Long): Long {
+        val now = System.currentTimeMillis()
+        val pausedSoFar = accumulatedPausedMs + if (_paused.value) now - pausedAtMs else 0L
+        return (now - startedAt - pausedSoFar).coerceAtLeast(0L)
     }
 
     fun setServiceConnected(connected: Boolean) {

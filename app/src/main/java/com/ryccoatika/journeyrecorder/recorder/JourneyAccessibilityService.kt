@@ -225,8 +225,7 @@ class JourneyAccessibilityService : AccessibilityService() {
             val journey = Graph.journeyDao.getJourney(journeyId) ?: return@launch
             while (true) {
                 val count = Graph.journeyDao.countEvents(journeyId)
-                val elapsed = ((System.currentTimeMillis() - journey.startedAt) / 1000)
-                    .coerceAtLeast(0)
+                val elapsed = Graph.recorderState.recordedElapsedMs(journey.startedAt) / 1000
                 JourneyNotifier.showRecording(
                     this@JourneyAccessibilityService,
                     journey,
