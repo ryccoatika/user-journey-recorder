@@ -69,9 +69,16 @@ android {
         release {
             // Signed only when release/app-release.jks is present; null → unsigned.
             signingConfig = signingConfigs.findByName("release")
-            optimization {
-                enable = false
-            }
+            // R8 full mode (pinned in gradle.properties): shrink + optimize +
+            // obfuscate, and strip unused resources. mapping.txt is uploaded to
+            // Play by the deploy workflow so crash stacks stay readable.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                // Optimizing defaults — never proguard-android.txt (forces -dontoptimize).
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
     compileOptions {
