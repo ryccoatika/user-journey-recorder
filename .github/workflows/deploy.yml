@@ -1,0 +1,204 @@
+name: Deploy
+
+# A push to develop builds and publishes to the Play Internal testing track.
+# A push to main (i.e. develop merged into main) only tags the release and cuts
+# the GitHub Release, attaching the artifacts the develop run built for the
+# build currently on Internal testing. Nothing is rebuilt and nothing is
+# promoted on Play — promoting Internal testing to Production is done by hand in
+# the Play Console (or `bundle exec fastlane android promote_to_production`).
+on:
+  push:
+    branches: [develop, main]
+
+# Never run two deploys for the same branch at once; newer push wins.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the release + tag on main via the GITHUB_TOKEN
+      actions: read     # fetch the develop run's artifacts to attach to the release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so the versionCode (commit count) is stable
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Ruby + fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Decrypt signing + service-account secrets
+        env:
+          ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }}
+        run: ./release/decrypt-secrets.sh
+
+      # ---------------------------------------------------------------- develop
+      - name: Compute versionCode (develop)
+        id: version
+        if: github.ref == 'refs/heads/develop'
+        # Derived from the workflow run number so it's simple and monotonic.
+        # The 100 base leaves headroom below it; Play requires each versionCode
+        # to strictly increase.
+        run: echo "code=$(( 100 + ${{ github.run_number }} ))" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed release AAB + APK (develop)
+        if: github.ref == 'refs/heads/develop'
+        env:
+          ORG_GRADLE_PROJECT_JOURNEYRECORDER_RELEASE_KEYSTORE_PWD: ${{ secrets.JOURNEYRECORDER_RELEASE_KEYSTORE_PWD }}
+          ORG_GRADLE_PROJECT_JOURNEYRECORDER_RELEASE_KEY_PWD: ${{ secrets.JOURNEYRECORDER_RELEASE_KEY_PWD }}
+        run: ./gradlew :app:bundleRelease :app:assembleRelease -PappVersionCode=${{ steps.version.outputs.code }}
+
+      # The artifact name encodes the versionCode: the main run looks it up by
+      # that name to attach the very same files to the GitHub release.
+      - name: Upload build artifacts (AAB + APK + mapping)
+        if: github.ref == 'refs/heads/develop'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-develop-v${{ steps.version.outputs.code }}
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/mapping/release/mapping.txt
+
+      - name: Publish to Internal testing (develop)
+        if: github.ref == 'refs/heads/develop'
+        run: bundle exec fastlane android internal_testing
+
+      # ------------------------------------------------------------------- main
+      - name: Resolve the versionCode on Internal testing (main)
+        id: internal
+        if: github.ref == 'refs/heads/main'
+        run: bundle exec fastlane android internal_version_code
+
+      # Reuse the artifacts the develop run built for that versionCode instead of
+      # rebuilding: a rebuild would produce a different mapping.txt than the one
+      # Play holds for that build, making the release assets misleading.
+      - name: Fetch the released build's artifacts (main)
+        id: assets
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CODE: ${{ steps.internal.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          NAME="release-develop-v${CODE}"
+          ID=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${NAME}&per_page=100" \
+                 --jq '[.artifacts[] | select(.expired == false)] | max_by(.created_at) | .id // empty')
+          if [ -z "$ID" ]; then
+            echo "::warning::No unexpired artifact named ${NAME}; the release will have no files attached."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${ID}/zip" > artifacts.zip
+          mkdir -p dist
+          unzip -q -j artifacts.zip -d dist
+          ls -l dist
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      # Tag the released version and cut a GitHub Release with the matching
+      # CHANGELOG section as notes and that build's AAB/APK/mapping attached.
+      # Idempotent: skips if the tag's release already exists.
+      - name: Create GitHub release + tag (main)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_CODE: ${{ steps.internal.outputs.version_code }}
+          HAS_ASSETS: ${{ steps.assets.outputs.found }}
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(grep -E '^appVersionName=' gradle.properties | head -1 | cut -d= -f2 | tr -d '[:space:]')
+          TAG="v${VERSION_NAME}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — skipping."
+            exit 0
+          fi
+
+          # Release notes come from the gradle-changelog-plugin: this version's
+          # section with the header and summary stripped.
+          NOTES=$(./gradlew -q :app:getChangelog --no-header --no-summary || true)
+          [ -z "$NOTES" ] && NOTES="Release $TAG"
+
+          ASSETS=()
+          if [ "$HAS_ASSETS" = "true" ]; then
+            while IFS= read -r f; do ASSETS+=("$f"); done < <(find dist -type f | sort)
+          fi
+
+          # ${ASSETS[@]+...} keeps `set -u` happy when the array is empty.
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "$TAG (build ${VERSION_CODE})" \
+            --notes "$NOTES" \
+            ${ASSETS[@]+"${ASSETS[@]}"}
+
+      # Announce a successful run to the team's Telegram topic. Only runs when
+      # every prior step (including the branch's publish/tag) succeeded.
+      - name: Notify Telegram
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # Supergroup 3958527097; the Bot API addresses it with a -100 prefix.
+          TELEGRAM_CHAT_ID: "-1003958527097"
+          TELEGRAM_TOPIC_ID: "3"
+          VERSION_CODE: ${{ steps.version.outputs.code || steps.internal.outputs.version_code }}
+          # Internal-testing opt-in link, handed to testers in the notification.
+          # The Play Developer API does not expose it, so it comes from the repo
+          # variable INTERNAL_TEST_URL (Play Console > Testing > Internal
+          # testing > Testers > Copy link); a repo secret of the same name also
+          # works. Unset, the message falls back to the store page.
+          INTERNAL_TEST_URL: ${{ vars.INTERNAL_TEST_URL || secrets.INTERNAL_TEST_URL }}
+          PACKAGE_NAME: com.ryccoatika.journeyrecorder
+        run: |
+          set -euo pipefail
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+            echo "::error::TELEGRAM_BOT_TOKEN secret is not set"; exit 1
+          fi
+
+          TEST_LINK=""
+          if [ "$GITHUB_REF" = "refs/heads/develop" ]; then
+            HEADLINE="Journey Recorder deployed"
+            TRACK="Internal testing"
+            if [ -n "${INTERNAL_TEST_URL:-}" ]; then
+              TEST_LINK="$INTERNAL_TEST_URL"
+            else
+              echo "::warning::INTERNAL_TEST_URL is not set; linking the store page instead."
+              TEST_LINK="https://play.google.com/store/apps/details?id=${PACKAGE_NAME}"
+            fi
+          else
+            HEADLINE="Journey Recorder tagged"
+            TRACK="Internal testing (unchanged) — promote to Production manually in the Play Console"
+          fi
+          COMMIT_SUBJECT=$(git log -1 --pretty=%s)
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          VERSION_NAME=$(grep -E '^appVersionName=' gradle.properties | head -1 | cut -d= -f2 | tr -d '[:space:]')
+
+          TEXT=$(printf '\xE2\x9C\x85 %s\nTrack: %s\nVersion: %s (build %s)\nBranch: %s @ %s\nBy: %s\nCommit: %s' \
+            "$HEADLINE" "$TRACK" "$VERSION_NAME" "$VERSION_CODE" "$GITHUB_REF_NAME" "${GITHUB_SHA:0:7}" "$GITHUB_ACTOR" "$COMMIT_SUBJECT")
+          if [ -n "$TEST_LINK" ]; then
+            # Play needs a few minutes to process the upload before testers see
+            # the new build on this link.
+            TEXT=$(printf '%s\nTesting link: %s' "$TEXT" "$TEST_LINK")
+          fi
+          TEXT=$(printf '%s\nRun: %s' "$TEXT" "$RUN_URL")
+
+          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "message_thread_id=${TELEGRAM_TOPIC_ID}" \
+            --data-urlencode "disable_web_page_preview=true" \
+            --data-urlencode "text=${TEXT}" \
+            -o /dev/null
