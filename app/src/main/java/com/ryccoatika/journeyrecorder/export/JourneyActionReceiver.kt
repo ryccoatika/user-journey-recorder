@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
  * receiver in this process.
  */
 class JourneyActionReceiver : BroadcastReceiver() {
-
     override fun onReceive(context: Context, intent: Intent) {
         val journeyId = intent.getLongExtra(EXTRA_JOURNEY_ID, -1L)
         if (journeyId <= 0) return
@@ -46,7 +45,10 @@ class JourneyActionReceiver : BroadcastReceiver() {
                                     result.displayPath,
                                 )
                             }
-                            is ExportResult.Failed -> toast(appContext, result.message)
+
+                            is ExportResult.Failed -> {
+                                toast(appContext, result.message)
+                            }
                         }
                     }
 
@@ -56,9 +58,13 @@ class JourneyActionReceiver : BroadcastReceiver() {
                         toast(appContext, appContext.getString(R.string.notif_journey_deleted))
                     }
 
-                    ACTION_STOP_RECORDING -> JourneyNotifier.stopAndShowResult(appContext)
+                    ACTION_STOP_RECORDING -> {
+                        JourneyNotifier.stopAndShowResult(appContext)
+                    }
 
-                    ACTION_PAUSE_RECORDING -> Graph.repository.togglePause()
+                    ACTION_PAUSE_RECORDING -> {
+                        Graph.repository.togglePause()
+                    }
 
                     ACTION_DISCARD_RECORDING -> {
                         Graph.repository.discardRecording()

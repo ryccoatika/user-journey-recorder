@@ -17,6 +17,8 @@ datastore = "1.1.7"
 googleServices = "4.4.2"
 firebaseCrashlyticsPlugin = "3.0.3"
 firebaseBom = "33.7.0"
+spotless = "8.10.2"
+ktlint = "1.8.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,4 +55,5 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlyticsPlugin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 

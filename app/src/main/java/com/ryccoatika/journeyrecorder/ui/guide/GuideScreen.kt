@@ -146,11 +146,13 @@ private fun SupportBadge(support: Support) {
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
         )
+
         Support.PARTIAL -> Triple(
             stringResource(R.string.guide_badge_partial),
             MaterialTheme.colorScheme.tertiaryContainer,
             MaterialTheme.colorScheme.onTertiaryContainer,
         )
+
         Support.NONE -> Triple(
             stringResource(R.string.guide_badge_none),
             MaterialTheme.colorScheme.errorContainer,

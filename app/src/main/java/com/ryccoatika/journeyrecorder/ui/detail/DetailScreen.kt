@@ -84,10 +84,10 @@ import com.ryccoatika.journeyrecorder.ui.common.InfoChip
 import com.ryccoatika.journeyrecorder.ui.common.TargetAppIcon
 import com.ryccoatika.journeyrecorder.ui.common.formatDuration
 import com.ryccoatika.journeyrecorder.ui.common.versionLabel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
 
 private data class ScreenGroup(
     val screenName: String?,
@@ -200,9 +200,13 @@ fun DetailScreen(
                             scope.launch {
                                 val message =
                                     when (val result = exportManager.saveToDownloads(j, snapshot)) {
-                                        is ExportResult.Saved ->
+                                        is ExportResult.Saved -> {
                                             String.format(savedToFormat, result.displayPath)
-                                        is ExportResult.Failed -> result.message
+                                        }
+
+                                        is ExportResult.Failed -> {
+                                            result.message
+                                        }
                                     }
                                 snackbarHostState.showSnackbar(message)
                             }
@@ -431,13 +435,29 @@ private fun eventIcon(type: EventType): ImageVector = when (type) {
 
 @Composable
 private fun eventTint(type: EventType): Color = when (type) {
-    EventType.CLICK, EventType.LONG_CLICK, EventType.SELECT ->
+    EventType.CLICK, EventType.LONG_CLICK, EventType.SELECT -> {
         MaterialTheme.colorScheme.primary
-    EventType.TEXT_INPUT -> MaterialTheme.colorScheme.secondary
-    EventType.SCREEN_OPEN -> MaterialTheme.colorScheme.onSurfaceVariant
-    EventType.SCROLL -> MaterialTheme.colorScheme.onSurfaceVariant
-    EventType.SYSTEM_DIALOG -> MaterialTheme.colorScheme.tertiary
-    EventType.APP_MARKER -> MaterialTheme.colorScheme.outline
+    }
+
+    EventType.TEXT_INPUT -> {
+        MaterialTheme.colorScheme.secondary
+    }
+
+    EventType.SCREEN_OPEN -> {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    EventType.SCROLL -> {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    EventType.SYSTEM_DIALOG -> {
+        MaterialTheme.colorScheme.tertiary
+    }
+
+    EventType.APP_MARKER -> {
+        MaterialTheme.colorScheme.outline
+    }
 }
 
 private fun elementLabel(event: JourneyEventEntity): String? =
@@ -453,39 +473,60 @@ private fun fieldLabel(event: JourneyEventEntity): String? =
 
 @Composable
 private fun primaryLine(event: JourneyEventEntity): String = when (event.eventType) {
-    EventType.SCREEN_OPEN ->
+    EventType.SCREEN_OPEN -> {
         // dialog rows reuse SCREEN_OPEN with "Dialog opened: …" in elementText
         event.elementText?.takeIf { it.isNotBlank() }
             ?: stringResource(
                 R.string.detail_open_screen,
                 event.screenName ?: stringResource(R.string.detail_unknown),
             )
-    EventType.CLICK ->
+    }
+
+    EventType.CLICK -> {
         elementLabel(event)?.let { stringResource(R.string.detail_tap_labeled, it) }
             ?: stringResource(R.string.detail_tap)
-    EventType.LONG_CLICK ->
+    }
+
+    EventType.LONG_CLICK -> {
         elementLabel(event)?.let { stringResource(R.string.detail_long_press_labeled, it) }
             ?: stringResource(R.string.detail_long_press)
+    }
+
     EventType.TEXT_INPUT -> {
         val target = fieldLabel(event)?.let { stringResource(R.string.detail_text_target, it) } ?: ""
         when {
-            event.masked -> stringResource(R.string.detail_type_masked, target)
-            event.typedText != null ->
+            event.masked -> {
+                stringResource(R.string.detail_type_masked, target)
+            }
+
+            event.typedText != null -> {
                 stringResource(R.string.detail_type_value, event.typedText, target)
-            else -> stringResource(R.string.detail_clear_text, target)
+            }
+
+            else -> {
+                stringResource(R.string.detail_clear_text, target)
+            }
         }
     }
-    EventType.SCROLL ->
+
+    EventType.SCROLL -> {
         elementLabel(event)?.let { stringResource(R.string.detail_scroll_labeled, it) }
             ?: stringResource(R.string.detail_scroll)
-    EventType.SELECT ->
+    }
+
+    EventType.SELECT -> {
         elementLabel(event)?.let { stringResource(R.string.detail_select_labeled, it) }
             ?: stringResource(R.string.detail_select)
-    EventType.SYSTEM_DIALOG ->
+    }
+
+    EventType.SYSTEM_DIALOG -> {
         elementLabel(event)?.let { stringResource(R.string.detail_system_dialog_labeled, it) }
             ?: stringResource(R.string.detail_system_dialog)
-    EventType.APP_MARKER ->
+    }
+
+    EventType.APP_MARKER -> {
         elementLabel(event) ?: stringResource(R.string.detail_app_marker)
+    }
 }
 
 @Composable

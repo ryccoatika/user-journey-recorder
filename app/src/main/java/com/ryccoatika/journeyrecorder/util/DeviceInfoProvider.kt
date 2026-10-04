@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 
 object DeviceInfoProvider {
-
     fun deviceInfo(): String = "${Build.MANUFACTURER} ${Build.MODEL}"
 
     fun androidVersion(): String =

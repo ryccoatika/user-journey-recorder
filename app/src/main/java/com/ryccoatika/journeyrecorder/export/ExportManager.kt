@@ -10,24 +10,30 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.analytics.AppAnalytics
-import com.ryccoatika.journeyrecorder.di.Graph
 import com.ryccoatika.journeyrecorder.data.db.JourneyEntity
 import com.ryccoatika.journeyrecorder.data.db.JourneyEventEntity
+import com.ryccoatika.journeyrecorder.di.Graph
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 sealed interface ExportResult {
-    data class Saved(val displayPath: String) : ExportResult
-    data class Failed(val message: String) : ExportResult
+    data class Saved(
+        val displayPath: String,
+    ) : ExportResult
+
+    data class Failed(
+        val message: String,
+    ) : ExportResult
 }
 
-class ExportManager(private val context: Context) {
-
+class ExportManager(
+    private val context: Context,
+) {
     /**
      * Renders the journey to markdown, writes it into the FileProvider-served
      * cache directory and launches a share chooser. EXTRA_TEXT carries the full
@@ -68,13 +74,14 @@ class ExportManager(private val context: Context) {
             }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(
-            sendIntent,
-            context.getString(R.string.export_share_chooser_title),
-        ).apply {
-            // May be called from a non-activity context (e.g. the a11y service).
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        val chooser = Intent
+            .createChooser(
+                sendIntent,
+                context.getString(R.string.export_share_chooser_title),
+            ).apply {
+                // May be called from a non-activity context (e.g. the a11y service).
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         context.startActivity(chooser)
     }
 

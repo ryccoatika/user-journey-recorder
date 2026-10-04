@@ -42,7 +42,10 @@ internal class NodeRecycler {
  * walk up <=5 parents to the first clickable-or-id ancestor and anchor on it.
  */
 internal object ElementIdentity {
-
+    // isChecked is deprecated at API 35 (replaced by getChecked()), but the
+    // replacement needs API 35 while we support minSdk 24 — the boolean works
+    // across all levels, so suppress the unavoidable deprecation.
+    @Suppress("DEPRECATION")
     fun describe(source: AccessibilityNodeInfoCompat, recycler: NodeRecycler): ElementInfo {
         val rect = Rect()
         source.getBoundsInScreen(rect)

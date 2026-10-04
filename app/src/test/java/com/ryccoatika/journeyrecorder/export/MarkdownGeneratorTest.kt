@@ -5,14 +5,13 @@ import com.ryccoatika.journeyrecorder.data.db.EventType
 import com.ryccoatika.journeyrecorder.data.db.JourneyEntity
 import com.ryccoatika.journeyrecorder.data.db.JourneyEventEntity
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
-import java.util.TimeZone
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.util.TimeZone
 
 class MarkdownGeneratorTest {
-
     // 2026-01-15 10:30:00 UTC
     private val t0 = 1_768_473_000_000L
 
@@ -108,7 +107,8 @@ class MarkdownGeneratorTest {
             event(0, EventType.CLICK, elementText = "Start"),
             event(1, EventType.SCREEN_OPEN, screenName = "LoginActivity"),
             event(
-                2, EventType.CLICK,
+                2,
+                EventType.CLICK,
                 screenName = "LoginActivity",
                 elementText = "Sign In",
                 elementId = "com.foo:id/btn_login",
@@ -117,7 +117,8 @@ class MarkdownGeneratorTest {
             ),
             event(3, EventType.SCREEN_OPEN, screenName = "HomeActivity"),
             event(
-                4, EventType.CLICK,
+                4,
+                EventType.CLICK,
                 screenName = "HomeActivity",
                 contentDesc = "Menu",
                 className = "android.widget.ImageButton",
@@ -164,21 +165,24 @@ class MarkdownGeneratorTest {
     fun `masked text input and clear text steps`() {
         val events = listOf(
             event(
-                0, EventType.TEXT_INPUT,
+                0,
+                EventType.TEXT_INPUT,
                 screenName = "LoginActivity",
                 elementText = "Email",
                 elementId = "com.foo:id/email",
                 typedText = "qa@test.com",
             ),
             event(
-                1, EventType.TEXT_INPUT,
+                1,
+                EventType.TEXT_INPUT,
                 elementText = "Password",
                 elementId = "com.foo:id/password",
                 typedText = null,
                 masked = true,
             ),
             event(
-                2, EventType.TEXT_INPUT,
+                2,
+                EventType.TEXT_INPUT,
                 elementText = "Search",
                 typedText = "",
             ),
@@ -215,12 +219,14 @@ class MarkdownGeneratorTest {
     fun `markdown special characters are escaped in dynamic text`() {
         val events = listOf(
             event(
-                0, EventType.CLICK,
+                0,
+                EventType.CLICK,
                 screenName = "Sale_Page",
                 elementText = "Buy *now* | 50% `off`",
             ),
             event(
-                1, EventType.CLICK,
+                1,
+                EventType.CLICK,
                 elementText = "Tap [here]",
                 elementId = "com.foo:id/`weird`id",
             ),
@@ -292,7 +298,8 @@ class MarkdownGeneratorTest {
     fun `low confidence, collection index, system dialog and app marker rendering`() {
         val events = listOf(
             event(
-                0, EventType.CLICK,
+                0,
+                EventType.CLICK,
                 screenName = "Checkout",
                 className = "android.widget.Button",
                 bounds = "[0,0][100,100]",
@@ -300,16 +307,19 @@ class MarkdownGeneratorTest {
                 collectionIndex = 3,
             ),
             event(
-                1, EventType.SCROLL,
+                1,
+                EventType.SCROLL,
                 className = "androidx.recyclerview.widget.RecyclerView",
             ),
             event(
-                2, EventType.SYSTEM_DIALOG,
+                2,
+                EventType.SYSTEM_DIALOG,
                 elementText = "Tapped Allow on permission dialog",
             ),
             event(3, EventType.SYSTEM_DIALOG),
             event(
-                4, EventType.APP_MARKER,
+                4,
+                EventType.APP_MARKER,
                 elementText = "Left target app (com.example.shop)",
             ),
         )

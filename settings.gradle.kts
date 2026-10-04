@@ -24,4 +24,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Journey Recorder"
 include(":app")
- 

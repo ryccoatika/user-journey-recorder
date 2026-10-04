@@ -17,7 +17,6 @@ import com.ryccoatika.journeyrecorder.recorder.JourneyAccessibilityService
 import com.ryccoatika.journeyrecorder.ui.theme.JourneyRecorderTheme
 
 class MainActivity : ComponentActivity() {
-
     /** One-shot deep links from the bubble / notification. */
     private var pending by mutableStateOf(DeepLink())
 

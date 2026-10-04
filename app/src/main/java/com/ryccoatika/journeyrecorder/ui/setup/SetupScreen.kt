@@ -8,7 +8,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -60,6 +59,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -180,10 +180,13 @@ fun SetupScreen(
                     ok = false,
                     required = true,
                     description = when {
-                        viewModel.accessibilityEnabled ->
+                        viewModel.accessibilityEnabled -> {
                             stringResource(R.string.setup_perm_accessibility_desc_enabled)
-                        else ->
+                        }
+
+                        else -> {
                             stringResource(R.string.setup_perm_accessibility_desc_disabled)
+                        }
                     },
                     onFix = {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))

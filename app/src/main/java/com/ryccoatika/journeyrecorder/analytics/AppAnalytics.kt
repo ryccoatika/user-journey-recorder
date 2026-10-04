@@ -14,8 +14,9 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
  * a telemetry failure can never crash the app — especially the accessibility
  * service, whose crash would kill an in-progress recording.
  */
-class AppAnalytics(context: Context) {
-
+class AppAnalytics(
+    context: Context,
+) {
     private val analytics = FirebaseAnalytics.getInstance(context)
     private val crashlytics = FirebaseCrashlytics.getInstance()
 

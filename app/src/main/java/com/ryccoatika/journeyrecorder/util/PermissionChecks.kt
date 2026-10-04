@@ -7,7 +7,6 @@ import android.text.TextUtils
 import com.ryccoatika.journeyrecorder.recorder.JourneyAccessibilityService
 
 object PermissionChecks {
-
     /** True when our accessibility service is listed in the system's enabled-services setting. */
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
         val expected = ComponentName(context, JourneyAccessibilityService::class.java)

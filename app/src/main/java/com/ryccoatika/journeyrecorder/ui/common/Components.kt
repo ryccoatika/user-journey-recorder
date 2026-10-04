@@ -59,7 +59,8 @@ fun TargetAppIcon(
         value = packageName?.let { pkg ->
             withContext(Dispatchers.IO) {
                 runCatching {
-                    context.packageManager.getApplicationIcon(pkg)
+                    context.packageManager
+                        .getApplicationIcon(pkg)
                         .toBitmap(ICON_PX, ICON_PX)
                         .asImageBitmap()
                 }.getOrNull()

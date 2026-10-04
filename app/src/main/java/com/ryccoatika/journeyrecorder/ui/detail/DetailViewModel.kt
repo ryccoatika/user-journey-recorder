@@ -20,14 +20,15 @@ class DetailViewModel(
     private val repo: JourneyRepository = Graph.repository,
     private val dao: JourneyDao = Graph.journeyDao,
 ) : ViewModel() {
-
     private val route: DetailRoute = savedStateHandle.toRoute()
     val journeyId: Long = route.journeyId
 
-    val journey: StateFlow<JourneyEntity?> = dao.observeJourney(journeyId)
+    val journey: StateFlow<JourneyEntity?> = dao
+        .observeJourney(journeyId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val events: StateFlow<List<JourneyEventEntity>> = dao.observeEvents(journeyId)
+    val events: StateFlow<List<JourneyEventEntity>> = dao
+        .observeEvents(journeyId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun redact(eventId: Long) {

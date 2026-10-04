@@ -80,6 +80,7 @@ internal class HomeScrollSignals(
                     if (queryEmpty() && !searchFieldFocused()) searchFieldExpanded = false
                     accumulated = 0f
                 }
+
                 accumulated >= hysteresisPx -> {
                     fabVisible = true
                     if (queryEmpty() && !searchFieldFocused()) searchFieldExpanded = true
@@ -110,10 +111,10 @@ internal fun rememberHomeScrollSignals(
         )
     }
     LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow {
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        }
-            .distinctUntilChanged()
+        androidx.compose.runtime
+            .snapshotFlow {
+                listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+            }.distinctUntilChanged()
             .collect { atTop ->
                 if (atTop) {
                     signals.fabVisible = true
