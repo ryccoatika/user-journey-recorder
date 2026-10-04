@@ -20,3 +20,9 @@ spotless {
         ktlint(libs.versions.ktlint.get())
     }
 }
+
+// Convenience alias so `./gradlew -q changelogs` prints the current version's
+// notes (delegates to the gradle-changelog-plugin task registered on :app).
+tasks.register("changelogs") {
+    dependsOn(":app:getChangelog")
+}

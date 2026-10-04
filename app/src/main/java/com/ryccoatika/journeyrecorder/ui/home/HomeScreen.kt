@@ -110,6 +110,9 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    // Hoisted so the Toast lambda doesn't call context.getString (stale across
+    // config changes; flagged by lint's LocalContextGetResourceValueCall).
+    val enableBubbleMsg = stringResource(R.string.home_bubble_enable_a11y)
     val items by viewModel.items.collectAsState()
     val banner by viewModel.banner.collectAsState()
     val bubbleEnabled by viewModel.bubbleEnabled.collectAsState()
@@ -183,7 +186,7 @@ fun HomeScreen(
                                     Toast
                                         .makeText(
                                             context,
-                                            context.getString(R.string.home_bubble_enable_a11y),
+                                            enableBubbleMsg,
                                             Toast.LENGTH_LONG,
                                         ).show()
                                     context.startActivity(

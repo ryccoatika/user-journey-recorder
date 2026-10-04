@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.changelog)
 }
 
 // Firebase is mandatory (google-services + crashlytics + analytics).
@@ -10,6 +11,14 @@ plugins {
 // ENCRYPT_KEY=<passphrase> ./release/decrypt-secrets.sh before building.
 apply(plugin = "com.google.gms.google-services")
 apply(plugin = "com.google.firebase.crashlytics")
+
+// versionCode is CI-driven so Play testing tracks always get a monotonically
+// increasing code. CI passes -PappVersionCode=<run-based>; default 1 locally.
+val appVersionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
+// Version name lives in gradle.properties (single source shared with CI) — used
+// by the manifest and the gradle-changelog-plugin (so getChangelog returns
+// this version's section).
+val appVersionName = project.findProperty("appVersionName") as String
 
 android {
     namespace = "com.ryccoatika.journeyrecorder"
@@ -23,8 +32,8 @@ android {
         applicationId = "com.ryccoatika.journeyrecorder"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -81,6 +90,14 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+changelog {
+    version.set(appVersionName)
+    // CHANGELOG.md lives at the repo root, not inside the module.
+    path.set(rootProject.file("CHANGELOG.md").canonicalPath)
+    // Our versionName is "1.0", not strict SemVer — accept 2+ number segments.
+    headerParserRegex.set("""\d+(\.\d+)+""".toRegex())
 }
 
 dependencies {
