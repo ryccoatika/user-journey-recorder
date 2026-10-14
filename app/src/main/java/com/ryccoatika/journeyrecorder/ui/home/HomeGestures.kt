@@ -12,6 +12,8 @@ private const val DRAG_SELECT_EDGE_PX = 140f
  * A single long-press (press, lift) toggles the anchor and enters selection
  * mode; dragging extends/shrinks the covered range. Long-press stays OFF the
  * rows — a row-level long-press would consume the pointer and kill this.
+ * [bottomObscuredPx] is the strip at the list's bottom drawn behind the nav
+ * bar / bottom bar; the auto-scroll edge sits above it, not under it.
  */
 internal fun Modifier.dragToSelect(
     listState: LazyListState,
@@ -19,7 +21,8 @@ internal fun Modifier.dragToSelect(
     onSelectAnchor: (Long) -> Set<Long>,
     setSelection: (Set<Long>) -> Unit,
     scrollBy: (Float) -> Unit,
-): Modifier = pointerInput(orderedIds) {
+    bottomObscuredPx: Float = 0f,
+): Modifier = pointerInput(orderedIds, bottomObscuredPx) {
     var anchorId: Long? = null
     var base: Set<Long> = emptySet()
     detectDragGesturesAfterLongPress(
@@ -33,9 +36,10 @@ internal fun Modifier.dragToSelect(
             val anchor = anchorId ?: return@detectDragGesturesAfterLongPress
             val y = change.position.y
             val edge = DRAG_SELECT_EDGE_PX
+            val bottomEdge = size.height - bottomObscuredPx - edge
             when {
                 y < edge -> scrollBy(y - edge)
-                y > size.height - edge -> scrollBy(y - (size.height - edge))
+                y > bottomEdge -> scrollBy(y - bottomEdge)
             }
             val overId = listState.journeyIdAt(y) ?: return@detectDragGesturesAfterLongPress
             val anchorIndex = orderedIds.indexOf(anchor)

@@ -21,7 +21,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StepPipelineTest {
-
     private class FakeDao : JourneyDao {
         val events = mutableListOf<JourneyEventEntity>()
 
@@ -32,20 +31,35 @@ class StepPipelineTest {
 
         // Unused surface.
         override suspend fun insertJourney(journey: JourneyEntity): Long = 0
+
         override suspend fun rename(id: Long, name: String) = Unit
+
         override suspend fun finish(id: Long, endedAt: Long, status: JourneyStatus, pausedMs: Long) = Unit
+
         override suspend fun setNoElementIds(id: Long, noElementIds: Boolean) = Unit
+
         override suspend fun deleteJourney(id: Long) = Unit
+
         override fun observeJourneys(): Flow<List<JourneyEntity>> = emptyFlow()
+
         override suspend fun getJourney(id: Long): JourneyEntity? = null
+
         override fun observeJourney(id: Long): Flow<JourneyEntity?> = emptyFlow()
+
         override suspend fun getUnfinishedJourneys(): List<JourneyEntity> = emptyList()
+
         override fun observeEvents(journeyId: Long): Flow<List<JourneyEventEntity>> = emptyFlow()
+
         override suspend fun getEvents(journeyId: Long): List<JourneyEventEntity> = emptyList()
+
         override fun observeEventCount(journeyId: Long): Flow<Int> = emptyFlow()
+
         override fun observeEventCounts(): Flow<List<JourneyCount>> = emptyFlow()
+
         override suspend fun getLastEventTime(journeyId: Long): Long? = null
+
         override suspend fun countEvents(journeyId: Long): Int = events.size
+
         override suspend fun redactEvent(eventId: Long) = Unit
     }
 
@@ -247,6 +261,7 @@ class StepPipelineTest {
             className = "androidx.recyclerview.widget.RecyclerView",
             bounds = "[0,0][1080,1920]",
         )
+
         fun scroll(uptimeMs: Long, dy: Int) = RawCapture.Scroll(
             uptimeMs = uptimeMs,
             wallClockMs = 1_000_000 + uptimeMs,

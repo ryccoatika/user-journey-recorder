@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
  * notification. WindowManager work stays on a Main.immediate scope.
  */
 class JourneyAccessibilityService : AccessibilityService() {
-
     private var scope: CoroutineScope? = null
     private var bubble: BubbleController? = null
     private var notifJob: Job? = null
@@ -129,16 +128,18 @@ class JourneyAccessibilityService : AccessibilityService() {
                     pipeline.submit(appMarker(getString(R.string.svc_marker_returned_to_target)))
                 }
                 if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-                    screenTracker.maybeResampleOnTap(
-                        SystemClock.uptimeMillis(),
-                        System.currentTimeMillis(),
-                    )?.let(pipeline::submit)
+                    screenTracker
+                        .maybeResampleOnTap(
+                            SystemClock.uptimeMillis(),
+                            System.currentTimeMillis(),
+                        )?.let(pipeline::submit)
                 }
                 interpreter.extract(event)?.let(pipeline::submit)
             }
 
-            pkg in SYSTEM_ALLOWLIST ->
+            pkg in SYSTEM_ALLOWLIST -> {
                 interpreter.extractSystemDialog(event)?.let(pipeline::submit)
+            }
 
             else -> {
                 if (!leftTargetApp &&
@@ -169,7 +170,8 @@ class JourneyAccessibilityService : AccessibilityService() {
     private fun startRecordingForeground() {
         if (Graph.recorderState.current is RecorderStateHolder.RecorderState.Recording) return
         // Live probe first (most reliable), then the tracked value.
-        val probed = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+        val probed = runCatching { rootInActiveWindow?.packageName?.toString() }
+            .getOrNull()
             ?.takeIf { it != packageName && it != OWN_PACKAGE && !isTransientSystemPackage(it) }
         val pkg = probed ?: lastForegroundPackage
         if (pkg == null || pkg in launcherPackages || pkg == packageName) {
@@ -201,11 +203,12 @@ class JourneyAccessibilityService : AccessibilityService() {
     private fun discardCurrent() {
         scope?.launch {
             Graph.repository.discardRecording()
-            Toast.makeText(
-                this@JourneyAccessibilityService,
-                getString(R.string.svc_recording_discarded),
-                Toast.LENGTH_SHORT,
-            ).show()
+            Toast
+                .makeText(
+                    this@JourneyAccessibilityService,
+                    getString(R.string.svc_recording_discarded),
+                    Toast.LENGTH_SHORT,
+                ).show()
         }
     }
 
@@ -252,7 +255,8 @@ class JourneyAccessibilityService : AccessibilityService() {
 
     private fun resolveLauncherPackages(): Set<String> = runCatching {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        packageManager.queryIntentActivities(intent, 0)
+        packageManager
+            .queryIntentActivities(intent, 0)
             .mapNotNull { it.activityInfo?.packageName }
             .toSet()
     }.getOrDefault(emptySet())
@@ -265,11 +269,12 @@ class JourneyAccessibilityService : AccessibilityService() {
     private fun onZeroElementIds() {
         val state = Graph.recorderState.current
             as? RecorderStateHolder.RecorderState.Recording ?: return
-        Toast.makeText(
-            this,
-            getString(R.string.svc_no_element_ids),
-            Toast.LENGTH_LONG,
-        ).show()
+        Toast
+            .makeText(
+                this,
+                getString(R.string.svc_no_element_ids),
+                Toast.LENGTH_LONG,
+            ).show()
         scope?.launch { Graph.journeyDao.setNoElementIds(state.journeyId, true) }
     }
 

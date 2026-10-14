@@ -5,7 +5,10 @@ import androidx.room.Insert
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
-data class JourneyCount(val journeyId: Long, val cnt: Int)
+data class JourneyCount(
+    val journeyId: Long,
+    val cnt: Int,
+)
 
 @Dao
 interface JourneyDao {

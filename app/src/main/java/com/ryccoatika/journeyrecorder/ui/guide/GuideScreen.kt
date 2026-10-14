@@ -63,9 +63,9 @@ fun GuideScreen(onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
         ) {
             SectionTitle(stringResource(R.string.guide_section_ids_title))
             BodyText(stringResource(R.string.guide_section_ids_body))
@@ -146,11 +146,13 @@ private fun SupportBadge(support: Support) {
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
         )
+
         Support.PARTIAL -> Triple(
             stringResource(R.string.guide_badge_partial),
             MaterialTheme.colorScheme.tertiaryContainer,
             MaterialTheme.colorScheme.onTertiaryContainer,
         )
+
         Support.NONE -> Triple(
             stringResource(R.string.guide_badge_none),
             MaterialTheme.colorScheme.errorContainer,

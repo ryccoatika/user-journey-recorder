@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val appPrefs: AppPrefs = Graph.appPrefs,
 ) : ViewModel() {
-
     val themeMode: StateFlow<ThemeMode> = appPrefs
         .observeThemeMode()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)

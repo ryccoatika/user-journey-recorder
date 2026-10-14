@@ -13,36 +13,46 @@ import com.ryccoatika.journeyrecorder.data.db.Confidence
  * degrades to event-payload extraction with [Confidence.LOW] — a click is
  * never dropped because a node went stale.
  */
-class EventInterpreter(private val screenTracker: ScreenTracker) {
-
+class EventInterpreter(
+    private val screenTracker: ScreenTracker,
+) {
     fun extract(event: AccessibilityEvent): RawCapture? {
         val uptimeMs = SystemClock.uptimeMillis()
         val wallClockMs = System.currentTimeMillis()
         return when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ->
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 screenTracker.onWindowStateChanged(event, uptimeMs, wallClockMs)
+            }
 
-            AccessibilityEvent.TYPE_VIEW_CLICKED ->
+            AccessibilityEvent.TYPE_VIEW_CLICKED -> {
                 click(event, uptimeMs, wallClockMs, longClick = false)
+            }
 
-            AccessibilityEvent.TYPE_VIEW_LONG_CLICKED ->
+            AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> {
                 click(event, uptimeMs, wallClockMs, longClick = true)
+            }
 
             AccessibilityEvent.TYPE_VIEW_SELECTED -> {
                 val (element, confidence) = elementFromEvent(event)
                 RawCapture.Select(uptimeMs, wallClockMs, screenTracker.currentScreen, confidence, element)
             }
 
-            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> text(event, uptimeMs, wallClockMs)
+            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
+                text(event, uptimeMs, wallClockMs)
+            }
 
             AccessibilityEvent.TYPE_VIEW_FOCUSED -> {
                 val (element, confidence) = elementFromEvent(event)
                 RawCapture.FocusChange(uptimeMs, wallClockMs, screenTracker.currentScreen, confidence, element)
             }
 
-            AccessibilityEvent.TYPE_VIEW_SCROLLED -> scroll(event, uptimeMs, wallClockMs)
+            AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
+                scroll(event, uptimeMs, wallClockMs)
+            }
 
-            else -> null
+            else -> {
+                null
+            }
         }
     }
 
@@ -59,7 +69,10 @@ class EventInterpreter(private val screenTracker: ScreenTracker) {
             .filterNotNull()
             .map { it.toString().trim() }
             .firstOrNull { it.isNotEmpty() }
-            ?: event.contentDescription?.toString()?.trim().orEmpty()
+            ?: event.contentDescription
+                ?.toString()
+                ?.trim()
+                .orEmpty()
         return RawCapture.SystemDialogClick(
             uptimeMs = uptimeMs,
             wallClockMs = wallClockMs,

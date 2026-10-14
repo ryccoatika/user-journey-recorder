@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="art/app-logo.svg" alt="Journey Recorder app icon" width="108" height="108">
+  <img src="art/app-logo.png" alt="Journey Recorder app icon" width="108" height="108">
 
   <h1>Journey Recorder</h1>
 
@@ -23,7 +23,7 @@
 </div>
 
 <p align="center">
-  <img src="art/feature-graphic.svg" alt="Journey Recorder — record any app, export Markdown" width="100%">
+  <img src="art/feature-graphic.png" alt="Journey Recorder — record any app, export Markdown" width="100%">
 </p>
 
 A native Android SQA tool that records user journeys in **other** apps — taps, text input, screen changes — via an `AccessibilityService`. Journeys are reviewed in-app with per-value redaction, then exported as Markdown that a downstream AI agent turns into test automation (Maestro / Appium / Espresso). Everything stays on-device until you export.

@@ -17,9 +17,9 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.graphics.drawable.toBitmap
-import android.widget.ImageView
 import com.ryccoatika.journeyrecorder.data.db.JourneyDao
 import com.ryccoatika.journeyrecorder.recorder.RecorderStateHolder
 import kotlinx.coroutines.CoroutineScope
@@ -88,7 +88,9 @@ class BubbleController(
     private var orbY = 0
 
     private val density: Float get() = service.resources.displayMetrics.density
+
     private fun dp(value: Int): Int = (value * density).roundToInt()
+
     private val screenWidth: Int get() = service.resources.displayMetrics.widthPixels
     private val screenHeight: Int get() = service.resources.displayMetrics.heightPixels
 
@@ -101,21 +103,22 @@ class BubbleController(
             renderCollapsed()
             return
         }
-        val layoutParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT,
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = screenWidth - dp(ORB_DP + 8)
-            y = dp(120)
-            // No OS window transition on resize/reposition — expand/collapse
-            // animate their own content, so the window itself must not slide.
-            windowAnimations = 0
-        }
+        val layoutParams = WindowManager
+            .LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT,
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = screenWidth - dp(ORB_DP + 8)
+                y = dp(120)
+                // No OS window transition on resize/reposition — expand/collapse
+                // animate their own content, so the window itself must not slide.
+                windowAnimations = 0
+            }
         orbX = layoutParams.x
         orbY = layoutParams.y
 
@@ -175,10 +178,14 @@ class BubbleController(
     fun dispose() = disable()
 
     private fun cancelJobs() {
-        pulseAnimator?.cancel(); pulseAnimator = null
-        collapseJob?.cancel(); collapseJob = null
-        timerJob?.cancel(); timerJob = null
-        countJob?.cancel(); countJob = null
+        pulseAnimator?.cancel()
+        pulseAnimator = null
+        collapseJob?.cancel()
+        collapseJob = null
+        timerJob?.cancel()
+        timerJob = null
+        countJob?.cancel()
+        countJob = null
     }
 
     // ------------------------------------------------------------- collapsed orb
@@ -238,10 +245,13 @@ class BubbleController(
                     shape = GradientDrawable.OVAL
                     setColor(if (paused) AMBER else RED)
                 }
-                addView(timer, FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                ))
+                addView(
+                    timer,
+                    FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                    ),
+                )
             }
             val inset = dp(5)
             ring.addView(
@@ -291,19 +301,20 @@ class BubbleController(
         // window is left untouched (just hidden), so nothing resizes/jumps.
         val orbLeft = if (fanLeft) exp - orbSize else 0
         val orbTop = if (fanDown) 0 else exp - orbSize
-        val fp = WindowManager.LayoutParams(
-            exp,
-            exp,
-            overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT,
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = orbX - orbLeft
-            y = orbY - orbTop
-            windowAnimations = 0
-        }
+        val fp = WindowManager
+            .LayoutParams(
+                exp,
+                exp,
+                overlayType(),
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT,
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = orbX - orbLeft
+                y = orbY - orbTop
+                windowAnimations = 0
+            }
         val container = FrameLayout(service)
         if (!addOverlay(container, fp)) {
             expanded = false
@@ -324,27 +335,54 @@ class BubbleController(
         main.scaleX = 0.5f
         main.scaleY = 0.5f
         main.alpha = 0f
-        main.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150)
-            .setInterpolator(DecelerateInterpolator()).start()
+        main
+            .animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .alpha(1f)
+            .setDuration(150)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
 
         val actions = if (recording != null) {
             val paused = stateHolder.isPaused
             listOf(
-                Action("■", RED) { collapse(); onStop() },
-                if (paused) {
-                    Action("▶", SURFACE) { collapse(); onTogglePause() }
-                } else {
-                    Action("❙❙", SURFACE) { collapse(); onTogglePause() }
+                Action("■", RED) {
+                    collapse()
+                    onStop()
                 },
-                Action("🗑", SURFACE) { collapse(); onDiscard() },
+                if (paused) {
+                    Action("▶", SURFACE) {
+                        collapse()
+                        onTogglePause()
+                    }
+                } else {
+                    Action("❙❙", SURFACE) {
+                        collapse()
+                        onTogglePause()
+                    }
+                },
+                Action("🗑", SURFACE) {
+                    collapse()
+                    onDiscard()
+                },
             )
         } else {
             // Close/stop the idle bubble by dragging it to the trash target,
             // not from the fan.
             listOf(
-                Action("●", RED, dot = true) { collapse(); onRecord() },
-                Action("⌂", SURFACE) { collapse(); onHome() },
-                Action("⚙", SURFACE) { collapse(); onSettings() },
+                Action("●", RED, dot = true) {
+                    collapse()
+                    onRecord()
+                },
+                Action("⌂", SURFACE) {
+                    collapse()
+                    onHome()
+                },
+                Action("⚙", SURFACE) {
+                    collapse()
+                    onSettings()
+                },
             )
         }
 
@@ -371,9 +409,13 @@ class BubbleController(
             btn.scaleX = 0.3f
             btn.scaleY = 0.3f
             btn.alpha = 0f
-            btn.animate()
-                .translationX(0f).translationY(0f)
-                .scaleX(1f).scaleY(1f).alpha(1f)
+            btn
+                .animate()
+                .translationX(0f)
+                .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .alpha(1f)
                 .setStartDelay(i * 25L)
                 .setDuration(200)
                 .setInterpolator(OvershootInterpolator(1.6f))
@@ -402,14 +444,24 @@ class BubbleController(
         // Retract each button back into the (hidden) orb, then drop the fan
         // window and reveal the orb — the orb window never moved, so no jump.
         views.forEach { (btn, dx, dy) ->
-            btn.animate()
-                .translationX(-dx.toFloat()).translationY(-dy.toFloat())
-                .scaleX(0.3f).scaleY(0.3f).alpha(0f)
+            btn
+                .animate()
+                .translationX(-dx.toFloat())
+                .translationY(-dy.toFloat())
+                .scaleX(0.3f)
+                .scaleY(0.3f)
+                .alpha(0f)
                 .setDuration(140)
                 .setInterpolator(AccelerateInterpolator())
                 .start()
         }
-        main?.animate()?.scaleX(0.5f)?.scaleY(0.5f)?.alpha(0f)?.setDuration(130)?.start()
+        main
+            ?.animate()
+            ?.scaleX(0.5f)
+            ?.scaleY(0.5f)
+            ?.alpha(0f)
+            ?.setDuration(130)
+            ?.start()
         uiScope?.launch {
             delay(150)
             removeFan()
@@ -532,24 +584,30 @@ class BubbleController(
         val container = FrameLayout(service).apply {
             addView(icon, FrameLayout.LayoutParams(dp(TRASH_DP), dp(TRASH_DP), Gravity.CENTER))
         }
-        val lp = WindowManager.LayoutParams(
-            dp(TRASH_DP + 24),
-            dp(TRASH_DP + 24),
-            overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            PixelFormat.TRANSLUCENT,
-        ).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            y = dp(72)
-        }
+        val lp = WindowManager
+            .LayoutParams(
+                dp(TRASH_DP + 24),
+                dp(TRASH_DP + 24),
+                overlayType(),
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT,
+            ).apply {
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                y = dp(72)
+            }
         try {
             windowManager.addView(container, lp)
             trashRoot = container
             container.alpha = 0f
             container.translationY = dp(40).toFloat()
-            container.animate().alpha(1f).translationY(0f).setDuration(180).start()
+            container
+                .animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(180)
+                .start()
         } catch (_: Throwable) {
             trashRoot = null
             trashIcon = null
@@ -601,8 +659,11 @@ class BubbleController(
             if (nowOver) vibrate()
             trashIcon?.apply {
                 (background as? GradientDrawable)?.setColor(if (nowOver) RED else TRASH_BG)
-                animate().scaleX(if (nowOver) 1.3f else 1f)
-                    .scaleY(if (nowOver) 1.3f else 1f).setDuration(120).start()
+                animate()
+                    .scaleX(if (nowOver) 1.3f else 1f)
+                    .scaleY(if (nowOver) 1.3f else 1f)
+                    .setDuration(120)
+                    .start()
             }
         }
         return if (nowOver) {
@@ -678,6 +739,7 @@ class BubbleController(
         private var startX = 0
         private var startY = 0
         private var dragging = false
+
         // screenCoord = paramCoord + origin. Measured once per drag.
         private var originX = 0
         private var originY = 0
@@ -739,11 +801,15 @@ class BubbleController(
                             hideTrashTarget()
                             onExit()
                         }
+
                         dragging -> {
                             hideTrashTarget()
                             snapToEdge()
                         }
-                        else -> expand()
+
+                        else -> {
+                            expand()
+                        }
                     }
                     return true
                 }

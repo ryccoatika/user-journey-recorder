@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 class SetupViewModel(
     private val repo: JourneyRepository = Graph.repository,
 ) : ViewModel() {
-
     var accessibilityEnabled by mutableStateOf(false)
         private set
     var overlayGranted by mutableStateOf(false)
@@ -102,7 +101,8 @@ class SetupViewModel(
             starting = false
             result.fold(
                 onSuccess = {
-                    appContext.packageManager.getLaunchIntentForPackage(app.packageName)
+                    appContext.packageManager
+                        .getLaunchIntentForPackage(app.packageName)
                         ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         ?.let(appContext::startActivity)
                     started = true

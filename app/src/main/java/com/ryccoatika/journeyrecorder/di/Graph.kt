@@ -32,7 +32,8 @@ object Graph {
 
     fun init(context: Context) {
         val appContext = context.applicationContext
-        db = Room.databaseBuilder(appContext, AppDatabase::class.java, "journeys.db")
+        db = Room
+            .databaseBuilder(appContext, AppDatabase::class.java, "journeys.db")
             .addMigrations(AppDatabase.MIGRATION_1_2)
             .build()
         appPrefs = AppPrefs(appContext)

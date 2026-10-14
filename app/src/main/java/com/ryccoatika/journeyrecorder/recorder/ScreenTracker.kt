@@ -59,15 +59,19 @@ class ScreenTracker(
         val className = event.className?.toString().orEmpty()
         maybeRunInitialSample(uptimeMs)
         return when {
-            isToastClass(className) -> null
+            isToastClass(className) -> {
+                null
+            }
 
-            isDialogClass(className) -> RawCapture.DialogOpen(
-                uptimeMs = uptimeMs,
-                wallClockMs = wallClockMs,
-                screenName = currentScreen, // not a screen boundary
-                confidence = Confidence.NORMAL,
-                title = dialogTitle(event),
-            )
+            isDialogClass(className) -> {
+                RawCapture.DialogOpen(
+                    uptimeMs = uptimeMs,
+                    wallClockMs = wallClockMs,
+                    screenName = currentScreen, // not a screen boundary
+                    confidence = Confidence.NORMAL,
+                    title = dialogTitle(event),
+                )
+            }
 
             isActivityLike(className) -> {
                 lastSampleUptimeMs = uptimeMs

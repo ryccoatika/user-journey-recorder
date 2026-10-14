@@ -11,7 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 class RecorderStateHolder {
     sealed interface RecorderState {
         data object Idle : RecorderState
-        data class Recording(val journeyId: Long, val targetPackage: String) : RecorderState
+
+        data class Recording(
+            val journeyId: Long,
+            val targetPackage: String,
+        ) : RecorderState
     }
 
     private val _state = MutableStateFlow<RecorderState>(RecorderState.Idle)

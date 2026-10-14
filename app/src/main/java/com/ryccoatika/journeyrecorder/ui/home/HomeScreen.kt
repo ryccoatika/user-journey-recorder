@@ -21,9 +21,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -79,6 +83,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -94,12 +100,12 @@ import com.ryccoatika.journeyrecorder.ui.common.SelectedAvatar
 import com.ryccoatika.journeyrecorder.ui.common.TargetAppIcon
 import com.ryccoatika.journeyrecorder.ui.common.formatDuration
 import com.ryccoatika.journeyrecorder.util.PermissionChecks
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,6 +116,9 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    // Hoisted so the Toast lambda doesn't call context.getString (stale across
+    // config changes; flagged by lint's LocalContextGetResourceValueCall).
+    val enableBubbleMsg = stringResource(R.string.home_bubble_enable_a11y)
     val items by viewModel.items.collectAsState()
     val banner by viewModel.banner.collectAsState()
     val bubbleEnabled by viewModel.bubbleEnabled.collectAsState()
@@ -180,11 +189,12 @@ fun HomeScreen(
                                 if (turningOn &&
                                     !PermissionChecks.isAccessibilityServiceEnabled(context)
                                 ) {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.home_bubble_enable_a11y),
-                                        Toast.LENGTH_LONG,
-                                    ).show()
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            enableBubbleMsg,
+                                            Toast.LENGTH_LONG,
+                                        ).show()
                                     context.startActivity(
                                         Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
                                     )
@@ -240,10 +250,20 @@ fun HomeScreen(
             }
         },
     ) { innerPadding ->
+        // Edge-to-edge: the bottom inset goes into the list's contentPadding so
+        // rows scroll behind the nav bar instead of being clipped above it.
+        val layoutDirection = LocalLayoutDirection.current
+        val bottomInset = innerPadding.calculateBottomPadding()
+        val bottomInsetPx = with(LocalDensity.current) { bottomInset.toPx() }
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    top = innerPadding.calculateTopPadding(),
+                    end = innerPadding.calculateEndPadding(layoutDirection),
+                ).consumeWindowInsets(innerPadding)
+                .imePadding()
                 .nestedScroll(scrollSignals.nestedScrollConnection),
         ) {
             AnimatedVisibility(
@@ -258,7 +278,11 @@ fun HomeScreen(
 
             val hasJourneys = items.isNotEmpty() || queryInput.isNotBlank()
             if (!hasJourneys) {
-                EmptyState(modifier = Modifier.weight(1f))
+                EmptyState(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(bottom = bottomInset),
+                )
             } else {
                 AnimatedVisibility(
                     visible = scrollSignals.searchFieldExpanded,
@@ -299,7 +323,9 @@ fun HomeScreen(
 
                 if (items.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = bottomInset),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -326,9 +352,13 @@ fun HomeScreen(
                                 },
                                 setSelection = viewModel::setSelection,
                                 scrollBy = { delta -> scope.launch { listState.scrollBy(delta) } },
+                                bottomObscuredPx = bottomInsetPx,
                             ),
                         contentPadding = PaddingValues(
-                            start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = 96.dp + bottomInset,
                         ),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
@@ -578,6 +608,7 @@ private fun relativeDate(context: android.content.Context, epochMs: Long): Strin
     val time = SimpleDateFormat("HH:mm", Locale.US).format(Date(epochMs))
     val day = Calendar.getInstance().apply { timeInMillis = epochMs }
     val now = Calendar.getInstance()
+
     fun Calendar.dayKey() = get(Calendar.YEAR) * 1000 + get(Calendar.DAY_OF_YEAR)
     return when (now.dayKey() - day.dayKey()) {
         0 -> context.getString(R.string.home_date_today, time)

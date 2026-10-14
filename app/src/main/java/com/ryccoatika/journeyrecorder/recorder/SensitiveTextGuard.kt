@@ -7,7 +7,6 @@ package com.ryccoatika.journeyrecorder.recorder
  * One instance per recording — stickiness must not leak across journeys.
  */
 class SensitiveTextGuard {
-
     private val stickyFields = HashSet<String>()
 
     /**

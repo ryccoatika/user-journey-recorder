@@ -29,8 +29,10 @@ class StepPipeline(
     private val dao: JourneyDao,
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : RecordingPipeline {
-
-    private data class TextKey(val windowId: Int, val fieldKey: String)
+    private data class TextKey(
+        val windowId: Int,
+        val fieldKey: String,
+    )
 
     private class PendingText(
         val key: TextKey,
@@ -61,11 +63,27 @@ class StepPipeline(
     )
 
     private sealed interface Msg {
-        data class Begin(val journeyId: Long) : Msg
-        data class Cap(val capture: RawCapture) : Msg
-        data class TextTimer(val key: TextKey, val generation: Long) : Msg
-        data class ScrollTimer(val nodeKey: String, val generation: Long) : Msg
-        class Barrier(val done: CompletableDeferred<Unit>) : Msg
+        data class Begin(
+            val journeyId: Long,
+        ) : Msg
+
+        data class Cap(
+            val capture: RawCapture,
+        ) : Msg
+
+        data class TextTimer(
+            val key: TextKey,
+            val generation: Long,
+        ) : Msg
+
+        data class ScrollTimer(
+            val nodeKey: String,
+            val generation: Long,
+        ) : Msg
+
+        class Barrier(
+            val done: CompletableDeferred<Unit>,
+        ) : Msg
     }
 
     private val channel = Channel<Msg>(Channel.UNLIMITED)
@@ -133,17 +151,21 @@ class StepPipeline(
                 lastClickUptimeMs = Long.MIN_VALUE / 2
             }
 
-            is Msg.Cap -> if (journeyId != null) onCapture(msg.capture)
+            is Msg.Cap -> {
+                if (journeyId != null) onCapture(msg.capture)
+            }
 
-            is Msg.TextTimer ->
+            is Msg.TextTimer -> {
                 pendingTexts[msg.key]
                     ?.takeIf { it.generation == msg.generation }
                     ?.let { flushText(it) }
+            }
 
-            is Msg.ScrollTimer ->
+            is Msg.ScrollTimer -> {
                 pendingScrolls[msg.nodeKey]
                     ?.takeIf { it.generation == msg.generation }
                     ?.let { flushScroll(it) }
+            }
 
             is Msg.Barrier -> {
                 flushAllPending()
@@ -167,7 +189,9 @@ class StepPipeline(
         // Discrete steps also flush pending scrolls to keep sequence order sane.
         flushAllScrolls()
         when (c) {
-            is RawCapture.FocusChange -> Unit // flush trigger only, never persisted
+            is RawCapture.FocusChange -> Unit
+
+            // flush trigger only, never persisted
 
             is RawCapture.Click -> onClick(c)
 
@@ -338,7 +362,10 @@ class StepPipeline(
             elementText = pending.element.hint,
             typedText = when {
                 masked -> null
-                isClear -> "" // explicit "Clear text" step
+
+                isClear -> ""
+
+                // explicit "Clear text" step
                 else -> finalText
             },
             masked = masked,

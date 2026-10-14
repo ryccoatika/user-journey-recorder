@@ -15,6 +15,7 @@ import java.util.Locale
  */
 interface RecordingPipeline {
     fun begin(journeyId: Long)
+
     suspend fun flushAndEnd()
 }
 

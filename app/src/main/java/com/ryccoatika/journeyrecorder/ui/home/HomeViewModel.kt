@@ -28,7 +28,11 @@ data class JourneyListItem(
 
 sealed interface RecordingBannerState {
     data object Hidden : RecordingBannerState
-    data class Visible(val targetPackage: String, val stepCount: Int) : RecordingBannerState
+
+    data class Visible(
+        val targetPackage: String,
+        val stepCount: Int,
+    ) : RecordingBannerState
 }
 
 class HomeViewModel(
@@ -37,7 +41,6 @@ class HomeViewModel(
     state: RecorderStateHolder = Graph.recorderState,
     private val appPrefs: AppPrefs = Graph.appPrefs,
 ) : ViewModel() {
-
     val bubbleEnabled: StateFlow<Boolean> = appPrefs
         .observeBubbleEnabled()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
@@ -95,19 +98,23 @@ class HomeViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val banner: StateFlow<RecordingBannerState> =
-        state.state.flatMapLatest { recorderState ->
-            when (recorderState) {
-                is RecorderStateHolder.RecorderState.Idle ->
-                    flowOf(RecordingBannerState.Hidden)
-                is RecorderStateHolder.RecorderState.Recording ->
-                    dao.observeEventCount(recorderState.journeyId).map { count ->
-                        RecordingBannerState.Visible(
-                            targetPackage = recorderState.targetPackage,
-                            stepCount = count,
-                        )
+        state.state
+            .flatMapLatest { recorderState ->
+                when (recorderState) {
+                    is RecorderStateHolder.RecorderState.Idle -> {
+                        flowOf(RecordingBannerState.Hidden)
                     }
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecordingBannerState.Hidden)
+
+                    is RecorderStateHolder.RecorderState.Recording -> {
+                        dao.observeEventCount(recorderState.journeyId).map { count ->
+                            RecordingBannerState.Visible(
+                                targetPackage = recorderState.targetPackage,
+                                stepCount = count,
+                            )
+                        }
+                    }
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecordingBannerState.Hidden)
 
     fun stopRecording() {
         viewModelScope.launch { repo.finishRecording() }

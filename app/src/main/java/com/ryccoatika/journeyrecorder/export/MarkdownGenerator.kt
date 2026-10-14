@@ -16,7 +16,6 @@ import kotlin.math.roundToLong
  * timezone (tests pin the timezone for stable golden strings).
  */
 object MarkdownGenerator {
-
     private const val PAUSE_THRESHOLD_MS = 5000L
 
     fun generate(journey: JourneyEntity, events: List<JourneyEventEntity>): String {
@@ -122,16 +121,33 @@ object MarkdownGenerator {
                 "**Open screen** `${stripBackticks(name)}`" + lowConfidenceSuffix(event)
             }
         }
-        EventType.CLICK -> renderAction("**Tap**", event)
-        EventType.LONG_CLICK -> renderAction("**Long-press**", event)
-        EventType.SELECT -> renderAction("**Select**", event)
-        EventType.TEXT_INPUT -> renderTextInput(event)
-        EventType.SCROLL -> renderScroll(event)
+
+        EventType.CLICK -> {
+            renderAction("**Tap**", event)
+        }
+
+        EventType.LONG_CLICK -> {
+            renderAction("**Long-press**", event)
+        }
+
+        EventType.SELECT -> {
+            renderAction("**Select**", event)
+        }
+
+        EventType.TEXT_INPUT -> {
+            renderTextInput(event)
+        }
+
+        EventType.SCROLL -> {
+            renderScroll(event)
+        }
+
         EventType.SYSTEM_DIALOG -> {
             val text = event.elementText?.takeIf { it.isNotBlank() }
             val body = text?.let { escapeMd(it) } ?: "interacted with system dialog"
             "**System**: $body" + lowConfidenceSuffix(event)
         }
+
         EventType.APP_MARKER -> {
             val text = event.elementText?.takeIf { it.isNotBlank() } ?: "App marker"
             "_${escapeMd(text)}_" + lowConfidenceSuffix(event)
@@ -166,10 +182,12 @@ object MarkdownGenerator {
                 target = "\"${escapeMd(contentDesc)}\" (content-desc)"
                 contentDescShown = true
             }
+
             className != null -> {
                 target = escapeMd(className.substringAfterLast('.'))
                 contentDescShown = false
             }
+
             else -> {
                 target = "element"
                 contentDescShown = false
@@ -226,11 +244,15 @@ object MarkdownGenerator {
                     lastWasNewline = true
                     continue
                 }
+
                 '`', '|', '*', '_', '[', ']', '<', '>', '#' -> {
                     append('\\')
                     append(c)
                 }
-                else -> append(c)
+
+                else -> {
+                    append(c)
+                }
             }
             lastWasNewline = false
         }

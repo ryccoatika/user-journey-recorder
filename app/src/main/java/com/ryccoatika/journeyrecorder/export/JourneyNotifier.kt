@@ -25,7 +25,6 @@ import java.io.File
  * [JourneyActionReceiver].
  */
 object JourneyNotifier {
-
     const val EXTRA_OPEN_JOURNEY_ID = "open_journey_id"
     private const val CHANNEL_ID = "journey_results"
 
@@ -81,7 +80,8 @@ object JourneyNotifier {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        val builder = NotificationCompat.Builder(context, RECORDING_CHANNEL_ID)
+        val builder = NotificationCompat
+            .Builder(context, RECORDING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_record)
             .setContentTitle(title)
             .setContentText(text)
@@ -94,15 +94,13 @@ object JourneyNotifier {
                 0,
                 context.getString(R.string.notif_action_stop),
                 broadcast(JourneyActionReceiver.ACTION_STOP_RECORDING, 91_001),
-            )
-            .addAction(
+            ).addAction(
                 0,
                 context.getString(
                     if (paused) R.string.notif_action_resume else R.string.notif_action_pause,
                 ),
                 broadcast(JourneyActionReceiver.ACTION_PAUSE_RECORDING, 91_002),
-            )
-            .addAction(
+            ).addAction(
                 0,
                 context.getString(R.string.notif_action_discard),
                 broadcast(JourneyActionReceiver.ACTION_DISCARD_RECORDING, 91_003),
@@ -191,7 +189,8 @@ object JourneyNotifier {
             journey.targetAppLabel ?: journey.targetPackage,
         )
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat
+            .Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_record)
             .setContentTitle(context.getString(R.string.notif_journey_saved))
             .setContentText(subtitle)
@@ -202,8 +201,7 @@ object JourneyNotifier {
                 0,
                 context.getString(R.string.notif_action_save),
                 broadcast(JourneyActionReceiver.ACTION_SAVE, 200_000),
-            )
-            .addAction(
+            ).addAction(
                 0,
                 context.getString(R.string.notif_action_delete),
                 broadcast(JourneyActionReceiver.ACTION_DELETE, 300_000),
@@ -224,7 +222,8 @@ object JourneyNotifier {
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return
         ensureChannel(context)
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat
+            .Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_record)
             .setContentTitle(title)
             .setContentText(text)

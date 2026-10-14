@@ -4,11 +4,13 @@ import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,14 +53,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.annotation.StringRes
 import com.ryccoatika.journeyrecorder.R
 import kotlinx.coroutines.launch
 
 /** Developer inbox + the fixed English tags used in the email subject bracket. */
 internal const val DEVELOPER_EMAIL = "me@ryccoatika.com"
 
-private enum class ContactCategory(@StringRes val labelRes: Int, val tag: String) {
+private enum class ContactCategory(
+    @StringRes val labelRes: Int,
+    val tag: String,
+) {
     SUGGESTION(R.string.contact_category_suggestion, "Suggestion"),
     BUG(R.string.contact_category_bug, "Bug"),
     REVIEW(R.string.contact_category_review, "Review"),
@@ -136,10 +140,11 @@ fun ContactDeveloperScreen(onBack: () -> Unit) {
     ) { padding ->
         Column(
             Modifier
-                .padding(padding)
                 .fillMaxSize()
+                .consumeWindowInsets(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
+                .padding(padding)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

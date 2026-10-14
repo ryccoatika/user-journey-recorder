@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Journey Recorder</title>
+<style>
+  :root {
+    --indigo: #3949AB; --ink: #171826; --muted: #5E6274;
+    --ground: #F4F5FA; --surface: #FFFFFF; --line: #C8CCDD;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font: 17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { border-bottom: 2px solid var(--indigo); padding-bottom: 20px; margin-bottom: 8px; }
+  h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -.5px; }
+  .updated { color: var(--muted); font-size: 15px; }
+  h2 { margin: 36px 0 10px; font-size: 21px; color: var(--indigo); }
+  h3 { margin: 22px 0 6px; font-size: 17px; }
+  p, li { color: #24263A; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  a { color: var(--indigo); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 20px; margin: 18px 0;
+  }
+  .lead { font-size: 18px; }
+  strong { color: var(--ink); }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground:#0F1017; --surface:#171826; --ink:#E9EAF3; --muted:#9A9FB5; --line:#2C2F44; --indigo:#AAB4FF; }
+    p, li { color: #D3D6E6; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Privacy Policy</h1>
+    <div class="updated">Journey Recorder &middot; Last updated: 3 October 2026</div>
+  </header>
+
+  <p class="lead">Journey Recorder (&ldquo;the app&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a software-QA tool that records a user journey you walk through in another app &mdash; the taps, text input, and screen changes &mdash; so you can export it as a Markdown step list for test automation. This policy explains what the app accesses, what little it collects, and how that information is handled.</p>
+
+  <div class="card">
+    <strong>The short version:</strong> Your recordings stay on your device. The app only captures a journey while <strong>you explicitly start a recording</strong>, masks passwords and sensitive fields before they are ever saved, and <strong>never uploads or stores your recordings on any server</strong>. Recordings leave your device only when <em>you</em> choose to export or share them. We collect only anonymous usage statistics and crash reports to fix bugs and improve the app.
+  </div>
+
+  <h2>1. How the app captures journeys</h2>
+  <p>Journey Recorder uses Android&rsquo;s <strong>Accessibility Service</strong> to observe the app you choose to record. While a recording is active, it reads interaction events and on-screen element details &mdash; the control you tapped, its identifiers or visible text, screen titles, and text you type &mdash; in order to reconstruct the steps you performed.</p>
+  <ul>
+    <li><strong>Nothing is captured unless you start a recording</strong> and pick a target app. When no recording is running, the service observes nothing.</li>
+    <li>Only the app you selected is recorded. Journey Recorder&rsquo;s own screens are always excluded.</li>
+    <li>The accessibility service is used solely to capture journeys. It is not used for advertising, profiling, or any purpose unrelated to the app&rsquo;s recording feature.</li>
+  </ul>
+
+  <h2>2. How recordings are stored</h2>
+  <p>Recorded journeys are saved <strong>only in a private database on your device</strong>. They are never transmitted to us or to any third party.</p>
+  <ul>
+    <li><strong>Sensitive text is masked before it is saved.</strong> Passwords and fields that look sensitive (PIN, OTP, CVV, card numbers) are detected and masked in the capture pipeline <em>before</em> anything is written to storage &mdash; the raw value is never persisted.</li>
+    <li>You can review every captured step in the app and redact any typed value before exporting.</li>
+    <li>Recordings leave your device only when you deliberately <strong>export</strong> them &mdash; via the Android share sheet or by saving a Markdown file to your Downloads. You control where an exported file goes.</li>
+    <li>Deleting a journey in the app removes it from your device.</li>
+  </ul>
+
+  <h2>3. Information we collect</h2>
+  <p>We collect a limited amount of <strong>non-personal, anonymous</strong> information through Google Firebase to understand how the app is used and to detect problems. This does <strong>not</strong> include your recordings, the content of any captured step, the text you type, screen contents, or the identity of the app you recorded.</p>
+  <h3>Usage analytics (Firebase Analytics)</h3>
+  <ul>
+    <li>Which screens are viewed and which actions are performed in Journey Recorder (for example, that a recording was started, stopped, or discarded, that an export happened, or that a value was redacted), and aggregate counts such as the number of steps in a recording.</li>
+    <li>A Google-generated, app-specific installation identifier, plus general device and app information (device model, OS version, app version, language, country).</li>
+  </ul>
+  <h3>Crash and diagnostic reports (Firebase Crashlytics)</h3>
+  <ul>
+    <li>If the app crashes, we receive a diagnostic report: the error and stack trace, device state, OS and app version. This helps us fix the problem.</li>
+  </ul>
+
+  <h2>4. Permissions we request and why</h2>
+  <ul>
+    <li><strong>Accessibility Service</strong> &mdash; required. Used to observe the app you choose to record and capture the steps of your journey. Enabled by you in your device&rsquo;s accessibility settings; you can turn it off at any time.</li>
+    <li><strong>Display over other apps</strong> &mdash; optional. Used for the floating control bubble that lets you pause or stop a recording. The bubble normally uses the accessibility overlay and needs no extra permission.</li>
+    <li><strong>Notifications</strong> &mdash; used to show an ongoing notification while recording, so you can stop even if the bubble is dismissed.</li>
+    <li><strong>Vibrate</strong> &mdash; used for haptic feedback on the control bubble.</li>
+    <li><strong>Internet / network state</strong> &mdash; used only to send the anonymous diagnostics described above. Your recordings are never transmitted over it.</li>
+  </ul>
+  <p>The app has no account, no sign-up, and shows no ads.</p>
+
+  <h2>5. How we use information</h2>
+  <ul>
+    <li>To provide the app&rsquo;s core feature (recording, reviewing, and exporting on-device journeys).</li>
+    <li>To understand which features are used so we can improve them.</li>
+    <li>To identify, diagnose, and fix crashes and bugs.</li>
+  </ul>
+
+  <h2>6. Sharing and third parties</h2>
+  <p>We do not sell your data and we do not share your recordings with anyone. The anonymous analytics and crash data described above are processed by <strong>Google Firebase</strong> (Google Analytics for Firebase and Firebase Crashlytics) acting as our service provider. Their handling of that data is governed by Google&rsquo;s privacy policy:</p>
+  <ul>
+    <li><a href="https://policies.google.com/privacy" rel="noopener" target="_blank">Google Privacy Policy</a></li>
+    <li><a href="https://firebase.google.com/support/privacy" rel="noopener" target="_blank">Firebase &amp; Privacy</a></li>
+  </ul>
+
+  <h2>7. Data retention</h2>
+  <p>Your recordings remain on your device and under your control; the app keeps no separate copy. Anonymous analytics and crash data are retained by Firebase according to Google&rsquo;s standard retention periods.</p>
+
+  <h2>8. Security</h2>
+  <p>Because your recordings never leave your device, they are protected by your device&rsquo;s own security, and sensitive fields are masked before they are stored. Analytics and crash data are transmitted to Firebase over encrypted connections.</p>
+
+  <h2>9. Your choices</h2>
+  <ul>
+    <li>You can turn the capture service off at any time in your device&rsquo;s <em>Settings &rarr; Accessibility &rarr; Journey Recorder</em>.</li>
+    <li>You can review and redact any captured value before exporting, and delete any journey from within the app.</li>
+    <li>You can stop all analytics and crash collection by uninstalling the app.</li>
+    <li>You decide if and when a recording leaves your device, by choosing to export or share it.</li>
+  </ul>
+
+  <h2>10. Children</h2>
+  <p>The app is not directed to children under 13, and we do not knowingly collect personal information from children.</p>
+
+  <h2>11. Changes to this policy</h2>
+  <p>We may update this policy from time to time. Changes will be posted on this page with a new &ldquo;Last updated&rdquo; date.</p>
+
+  <h2>12. Contact us</h2>
+  <p>Questions about this policy or your data? Contact us at <a href="mailto:me@ryccoatika.com">me@ryccoatika.com</a>.</p>
+
+  <footer>
+    &copy; 2026 Rycco Atika. Journey Recorder. All rights reserved.
+  </footer>
+</div>
+</body>
+</html>

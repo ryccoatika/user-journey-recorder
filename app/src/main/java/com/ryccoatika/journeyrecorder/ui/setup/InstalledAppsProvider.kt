@@ -19,7 +19,6 @@ data class InstalledApp(
 )
 
 object InstalledAppsProvider {
-
     /** All launchable apps except our own, sorted by label. */
     suspend fun load(context: Context): List<InstalledApp> = withContext(Dispatchers.IO) {
         val pm = context.packageManager
@@ -49,8 +48,7 @@ object InstalledAppsProvider {
                     versionName = DeviceInfoProvider.targetVersionName(context, packageName),
                     icon = bitmap.asImageBitmap(),
                 )
-            }
-            .sortedBy { it.label.lowercase() }
+            }.sortedBy { it.label.lowercase() }
             .toList()
     }
 

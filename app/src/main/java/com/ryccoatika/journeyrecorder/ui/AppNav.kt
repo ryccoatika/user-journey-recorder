@@ -31,7 +31,9 @@ object HomeRoute
 object SetupRoute
 
 @Serializable
-data class DetailRoute(val journeyId: Long)
+data class DetailRoute(
+    val journeyId: Long,
+)
 
 @Serializable
 object SettingsRoute
@@ -66,12 +68,14 @@ fun AppNav(
 
     when (onboardingSeen) {
         null -> Unit
+
         false -> OnboardingScreen(
             onFinish = {
                 Graph.analytics.onboardingCompleted()
                 scope.launch { Graph.appPrefs.setOnboardingSeen() }
             },
         )
+
         true -> AppNavHost(deepLink = deepLink, onDeepLinkHandled = onDeepLinkHandled)
     }
 }
@@ -96,12 +100,25 @@ private fun AppNavHost(
     // Deep links from the bubble / notification.
     androidx.compose.runtime.LaunchedEffect(deepLink) {
         when {
-            deepLink.journeyId != null -> navController.navigate(DetailRoute(deepLink.journeyId))
-            deepLink.openSetup -> navController.navigate(SetupRoute)
-            deepLink.openSettings -> navController.navigate(SettingsRoute)
-            deepLink.openHome ->
+            deepLink.journeyId != null -> {
+                navController.navigate(DetailRoute(deepLink.journeyId))
+            }
+
+            deepLink.openSetup -> {
+                navController.navigate(SetupRoute)
+            }
+
+            deepLink.openSettings -> {
+                navController.navigate(SettingsRoute)
+            }
+
+            deepLink.openHome -> {
                 navController.popBackStack(HomeRoute, inclusive = false)
-            else -> return@LaunchedEffect
+            }
+
+            else -> {
+                return@LaunchedEffect
+            }
         }
         onDeepLinkHandled()
     }

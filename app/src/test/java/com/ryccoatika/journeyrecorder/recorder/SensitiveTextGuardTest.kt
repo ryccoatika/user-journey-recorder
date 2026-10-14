@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SensitiveTextGuardTest {
-
     private fun guard() = SensitiveTextGuard()
 
     private fun mask(

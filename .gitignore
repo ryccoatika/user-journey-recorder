@@ -19,3 +19,9 @@ local.properties
 app/google-services.json
 release/app-release.jks
 release/*.json
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output
+.bundle
+vendor/bundle
