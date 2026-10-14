@@ -21,9 +21,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -79,6 +83,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -244,10 +250,20 @@ fun HomeScreen(
             }
         },
     ) { innerPadding ->
+        // Edge-to-edge: the bottom inset goes into the list's contentPadding so
+        // rows scroll behind the nav bar instead of being clipped above it.
+        val layoutDirection = LocalLayoutDirection.current
+        val bottomInset = innerPadding.calculateBottomPadding()
+        val bottomInsetPx = with(LocalDensity.current) { bottomInset.toPx() }
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    top = innerPadding.calculateTopPadding(),
+                    end = innerPadding.calculateEndPadding(layoutDirection),
+                ).consumeWindowInsets(innerPadding)
+                .imePadding()
                 .nestedScroll(scrollSignals.nestedScrollConnection),
         ) {
             AnimatedVisibility(
@@ -262,7 +278,11 @@ fun HomeScreen(
 
             val hasJourneys = items.isNotEmpty() || queryInput.isNotBlank()
             if (!hasJourneys) {
-                EmptyState(modifier = Modifier.weight(1f))
+                EmptyState(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(bottom = bottomInset),
+                )
             } else {
                 AnimatedVisibility(
                     visible = scrollSignals.searchFieldExpanded,
@@ -303,7 +323,9 @@ fun HomeScreen(
 
                 if (items.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = bottomInset),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -330,12 +352,13 @@ fun HomeScreen(
                                 },
                                 setSelection = viewModel::setSelection,
                                 scrollBy = { delta -> scope.launch { listState.scrollBy(delta) } },
+                                bottomObscuredPx = bottomInsetPx,
                             ),
                         contentPadding = PaddingValues(
                             start = 16.dp,
                             end = 16.dp,
                             top = 8.dp,
-                            bottom = 96.dp,
+                            bottom = 96.dp + bottomInset,
                         ),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {

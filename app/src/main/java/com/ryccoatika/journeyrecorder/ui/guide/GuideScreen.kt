@@ -63,9 +63,9 @@ fun GuideScreen(onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
         ) {
             SectionTitle(stringResource(R.string.guide_section_ids_title))
             BodyText(stringResource(R.string.guide_section_ids_body))
