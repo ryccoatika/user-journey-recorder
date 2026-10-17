@@ -91,14 +91,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
+import com.ryccoatika.journeyrecorder.ui.common.AccessibilityDisclosureDialog
 import com.ryccoatika.journeyrecorder.ui.common.InfoChip
 import com.ryccoatika.journeyrecorder.ui.common.PulsingRecordDot
 import com.ryccoatika.journeyrecorder.ui.common.SearchField
 import com.ryccoatika.journeyrecorder.ui.common.SelectedAvatar
-import com.ryccoatika.journeyrecorder.ui.common.AccessibilityDisclosureDialog
 import com.ryccoatika.journeyrecorder.ui.common.TargetAppIcon
-import com.ryccoatika.journeyrecorder.ui.common.openAccessibilitySettings
 import com.ryccoatika.journeyrecorder.ui.common.formatDuration
+import com.ryccoatika.journeyrecorder.ui.common.openAccessibilitySettings
 import com.ryccoatika.journeyrecorder.util.PermissionChecks
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
