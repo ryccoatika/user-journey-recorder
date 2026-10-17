@@ -53,7 +53,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -68,6 +72,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ryccoatika.journeyrecorder.R
+import com.ryccoatika.journeyrecorder.ui.common.AccessibilityDisclosureDialog
+import com.ryccoatika.journeyrecorder.ui.common.openAccessibilitySettings
 import com.ryccoatika.journeyrecorder.ui.common.versionLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,6 +86,17 @@ fun SetupScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
+    var showA11yDisclosure by rememberSaveable { mutableStateOf(false) }
+
+    if (showA11yDisclosure) {
+        AccessibilityDisclosureDialog(
+            onAgree = {
+                showA11yDisclosure = false
+                openAccessibilitySettings(context)
+            },
+            onDecline = { showA11yDisclosure = false },
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadApps(context)
@@ -194,9 +211,7 @@ fun SetupScreen(
                             stringResource(R.string.setup_perm_accessibility_desc_disabled)
                         }
                     },
-                    onFix = {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    },
+                    onFix = { showA11yDisclosure = true },
                 )
                 AnimatedVisibility(visible = !viewModel.overlayGranted) {
                     Column {
