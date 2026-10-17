@@ -6,7 +6,6 @@
     <!-- Home -->
     <string name="home_title">Journey Recorder</string>
     <string name="home_search">Search</string>
-    <string name="home_bubble_enable_a11y">Enable Journey Recorder to show the floating button</string>
     <string name="home_bubble_hide">Hide floating button</string>
     <string name="home_bubble_show">Show floating button</string>
     <string name="home_settings">Settings</string>
@@ -162,6 +161,19 @@
 
     <!-- Common -->
     <string name="common_selected">Selected</string>
+
+    <!-- Google Play prominent disclosure for the AccessibilityService API. -->
+    <string name="common_a11y_disclosure_title">Accessibility service use</string>
+    <string name="common_a11y_disclosure_intro">Journey Recorder uses the Android AccessibilityService API to record your journey through another app. This is the app\'s core feature: without it nothing can be recorded. Journey Recorder is a testing tool, not an assistive tool for people with disabilities.</string>
+    <string name="common_a11y_disclosure_collect_heading">What it collects</string>
+    <string name="common_a11y_disclosure_collect_body">Only while a recording you started is running, and only in the app you picked:\n• Taps, long-presses, scrolls and screen changes\n• Labels, element ids and positions of the controls you interact with\n• Text you type into fields. Passwords and sensitive fields (PIN, OTP, CVV, card numbers) are masked before saving and never stored.</string>
+    <string name="common_a11y_disclosure_use_heading">How it is used</string>
+    <string name="common_a11y_disclosure_use_body">To build a step-by-step list of your journey that you can review, redact and export as a Markdown test script. The service also shows the floating stop button over other apps.</string>
+    <string name="common_a11y_disclosure_share_heading">Sharing</string>
+    <string name="common_a11y_disclosure_share_body">Recordings are stored only on this device and are never uploaded. They leave your device only when you export or share them. Anonymous crash and usage diagnostics, which never contain recording content, are sent to improve the app.</string>
+    <string name="common_a11y_disclosure_footer">Tap \"Agree\" to open Accessibility settings and turn on Journey Recorder. You can turn it off there at any time.</string>
+    <string name="common_a11y_disclosure_agree">Agree</string>
+    <string name="common_a11y_disclosure_decline">Decline</string>
 
     <!-- Export -->
     <string name="export_share_chooser_title">Share journey</string>

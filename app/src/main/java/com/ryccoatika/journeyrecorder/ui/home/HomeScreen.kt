@@ -1,8 +1,5 @@
 package com.ryccoatika.journeyrecorder.ui.home
 
-import android.content.Intent
-import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -75,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -93,12 +91,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.db.JourneyStatus
+import com.ryccoatika.journeyrecorder.ui.common.AccessibilityDisclosureDialog
 import com.ryccoatika.journeyrecorder.ui.common.InfoChip
 import com.ryccoatika.journeyrecorder.ui.common.PulsingRecordDot
 import com.ryccoatika.journeyrecorder.ui.common.SearchField
 import com.ryccoatika.journeyrecorder.ui.common.SelectedAvatar
 import com.ryccoatika.journeyrecorder.ui.common.TargetAppIcon
 import com.ryccoatika.journeyrecorder.ui.common.formatDuration
+import com.ryccoatika.journeyrecorder.ui.common.openAccessibilitySettings
 import com.ryccoatika.journeyrecorder.util.PermissionChecks
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -116,15 +116,23 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    // Hoisted so the Toast lambda doesn't call context.getString (stale across
-    // config changes; flagged by lint's LocalContextGetResourceValueCall).
-    val enableBubbleMsg = stringResource(R.string.home_bubble_enable_a11y)
+    var showA11yDisclosure by rememberSaveable { mutableStateOf(false) }
     val items by viewModel.items.collectAsState()
     val banner by viewModel.banner.collectAsState()
     val bubbleEnabled by viewModel.bubbleEnabled.collectAsState()
     val selectedIds by viewModel.selectedIds.collectAsState()
     val vmQuery by viewModel.query.collectAsState()
     val selectionMode = selectedIds.isNotEmpty()
+
+    if (showA11yDisclosure) {
+        AccessibilityDisclosureDialog(
+            onAgree = {
+                showA11yDisclosure = false
+                openAccessibilitySettings(context)
+            },
+            onDecline = { showA11yDisclosure = false },
+        )
+    }
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -189,15 +197,7 @@ fun HomeScreen(
                                 if (turningOn &&
                                     !PermissionChecks.isAccessibilityServiceEnabled(context)
                                 ) {
-                                    Toast
-                                        .makeText(
-                                            context,
-                                            enableBubbleMsg,
-                                            Toast.LENGTH_LONG,
-                                        ).show()
-                                    context.startActivity(
-                                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
-                                    )
+                                    showA11yDisclosure = true
                                 }
                             },
                         ) {

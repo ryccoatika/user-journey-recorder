@@ -3,7 +3,6 @@ package com.ryccoatika.journeyrecorder.ui.settings
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,7 +67,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ryccoatika.journeyrecorder.R
 import com.ryccoatika.journeyrecorder.data.ThemeMode
+import com.ryccoatika.journeyrecorder.ui.common.AccessibilityDisclosureDialog
 import com.ryccoatika.journeyrecorder.ui.common.TargetAppIcon
+import com.ryccoatika.journeyrecorder.ui.common.openAccessibilitySettings
+import com.ryccoatika.journeyrecorder.util.PermissionChecks
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,6 +89,17 @@ fun SettingsScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showA11yDisclosure by rememberSaveable { mutableStateOf(false) }
+
+    if (showA11yDisclosure) {
+        AccessibilityDisclosureDialog(
+            onAgree = {
+                showA11yDisclosure = false
+                openAccessibilitySettings(context)
+            },
+            onDecline = { showA11yDisclosure = false },
+        )
+    }
 
     val versionName = remember {
         runCatching {
@@ -183,7 +197,13 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_accessibility_title),
                     subtitle = stringResource(R.string.settings_accessibility_subtitle),
                     onClick = {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        // Already enabled: user is managing/disabling it, no
+                        // consent needed. Otherwise disclose before enabling.
+                        if (PermissionChecks.isAccessibilityServiceEnabled(context)) {
+                            openAccessibilitySettings(context)
+                        } else {
+                            showA11yDisclosure = true
+                        }
                     },
                 )
             }
