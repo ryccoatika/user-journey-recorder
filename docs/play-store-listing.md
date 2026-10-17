@@ -21,7 +21,7 @@ Record a flow in any app and export it as ready-to-automate test steps
 ---
 
 ## Full description
-*(Play limit: 4000 characters. This one: ~2,350.)*
+*(Play limit: 4000 characters. This one: ~3,220.)*
 
 ```
 Turning a manual test into an automated one usually means writing every tap and field by hand. Journey Recorder does the tedious part for you: record yourself walking through a flow in any app, review the steps, and export a clean Markdown script you can hand to an AI agent or an engineer to turn into a Maestro, Appium, or Espresso test.
@@ -33,6 +33,13 @@ Pick the app you want to record, start the recording, and walk through the journ
 
 📝 EXPORT READY-TO-AUTOMATE STEPS
 Get a numbered, screen-by-screen Markdown step list with element ids, labels, and bounds — plus app, device, and Android version in the header. Share it anywhere or save it straight to your Downloads.
+
+♿ ACCESSIBILITY SERVICE API — HOW AND WHY IT'S USED
+Journey Recorder uses Android's AccessibilityService API. It is the app's core feature: recording a journey in another app is not possible without it. Journey Recorder is a testing tool, not an assistive tool for people with disabilities.
+• What it reads: only while a recording you started is running, and only in the app you picked — your taps, long-presses, scrolls, screen changes, the labels/ids/positions of the controls you touch, and the text you type (passwords and sensitive fields are masked and never stored).
+• Why: to turn your journey into a reviewable, exportable list of test steps, and to show the floating stop button over other apps.
+• Sharing: recordings stay on your device and are never uploaded; they leave only when you export or share them. The service never changes your settings, never performs actions on your behalf, and never records call audio.
+• Consent: the app shows a disclosure and asks you to Agree or Decline before you enable the service. You can turn it off any time in Settings › Accessibility.
 
 🧭 WORKS BEYOND NATIVE APPS
 Recording native Android, Jetpack Compose, Flutter, React Native, or WebView? When an app exposes no element ids, Journey Recorder falls back to text, content descriptions, and screen coordinates — and marks those steps so your automation knows.
@@ -73,13 +80,21 @@ test case generator, screen recorder for testing.
 - Don't repeat a keyword many times (Play flags stuffing); this copy keeps each
   term to a natural frequency.
 
-**⚠️ Accessibility-use policy (read before publishing)**
-Journey Recorder uses the `AccessibilityService` API to record other apps. Google
-Play restricts this: you must declare the accessibility use in Play Console
-(App content → "Accessibility" / permissions declaration), explain in-listing
-and in-app why the service is needed, and the app may face extra review or
-rejection if the use isn't an accessibility aid. Make sure the listing and the
-in-app Guide clearly state the recording purpose, link the privacy policy, and
-keep the `IsAccessibilityTool`/permissions declarations accurate. If Play
-approval is uncertain, this is designed to also work as an internal sideload /
-closed-testing distribution.
+**⚠️ Accessibility-use policy (read before every submission)**
+The first 1.0 submission was rejected for (1) no AccessibilityService mention in
+the long description and (2) a non-compliant prominent disclosure. Both are
+fixed — keep them that way:
+- Long description must keep the "ACCESSIBILITY SERVICE API" section above.
+- In-app: `AccessibilityDisclosureDialog` (two buttons, Agree/Decline; back =
+  decline) must appear before every jump to Accessibility settings while the
+  service is off. Never reintroduce a direct `ACTION_ACCESSIBILITY_SETTINGS`
+  launch.
+- Play Console › App content › **Accessibility API** declaration: core
+  functionality = recording user journeys for QA test automation; NOT an
+  `isAccessibilityTool`. Do not set `android:isAccessibilityTool`.
+- **Every submission needs a fresh demo video link** (YouTube unlisted is fine)
+  showing: open app › tap enable › disclosure dialog with both buttons › Agree ›
+  Accessibility settings › enable › record a short journey in another app ›
+  stop › review › export.
+- Privacy policy (`docs/privacy-policy.html`) must describe the same data the
+  disclosure lists.
